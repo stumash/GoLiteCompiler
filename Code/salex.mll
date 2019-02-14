@@ -3,6 +3,8 @@
 {
 
 open Lexing 
+open Saparse
+
 let num_lines = ref 0
 let num_chars = ref 0
 }

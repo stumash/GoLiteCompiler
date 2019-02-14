@@ -1,0 +1,1 @@
+ocamlbuild -use-menhir main_scan.native
