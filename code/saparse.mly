@@ -46,25 +46,66 @@
 %token LEN
 %token CAP
 
-%token LPAREN RPAREN
-%token LBRACK RBRACK
-%token LCURLY RCURLY
+%token LPAREN RPAREN (* (  ) *)
+%token LBRACK RBRACK (* [ ] *)
+%token LCURLY RCURLY (* { } *)
 
-%token SEMICOLON
-%token COLON
-%token COMMA
-%token DOT
+%token SEMICOLON (* ; *)
+%token COLON (* : *)
+%token COMMA (* , *)
+%token DOT (* . *)
 
-%token ELLIPSIS
+%token ELLIPSIS (* ... *)
 
 %token <int> INT
+(*
 %token PLUS MINUS TIMES DIV
+*)
+%token EOF (* end of file *)
 
-%token EOF
-
+(*decide whether we use precedence directives or just normal and create our grammer to be correct *)
+(*
 %left PLUS MINUS        /* lowest precedence */
 %left TIMES DIV         /* medium precedence */
 %nonassoc UMINUS        /* highest precedence */
+*)
+
+(* Arithmetic operators *)
+%token PLUS MINUS (* '+' '-' *)
+%token MULT DIV (* '*' '/' *)
+%token MOD (* '%' *)
+
+(* Logical Operators *)
+%token AND OR (* '&' '|' *)
+%token XOR (* '^' *)
+%token LSHFT RSHFT (* '<<' '>>' *)
+%token NAND (* '&^' *)
+%token NOT (* '!' *)
+
+(* Shorthand Arithmetic *)
+%token SPLUS SMINUS (* '+=' '-=' *)
+%token SMULT SDIV (* '*=' '/=' *)
+%token SMOD (* '%=' *)
+
+(* Shorthand Logical *)
+%token SAND SOR (* '&=' '|=' *)
+%token SXOR (* '^=' *)
+%token SLSHFT SRSHFT (* '<<=' '>>=' *)
+%token SNAND (* '&^=' *)
+
+(* Relational Operators *)
+%token EQ NEQ (* '==' '!=' *)
+%token LT LTEQ (* '<' '<=' *)
+%token GT GTEQ (* '>' '>=' *)
+%token ANDAND OROR (* '&&' '||' *)
+
+(* Misc Operators *)
+%token CH (* '<-' *)
+%token INC DEC (* '++' '--' *)
+%token ASS (* '=' *)
+%token COLONASS (* need to define a name appropriately for ':=' as i yet do not know what it signifies *)
+
+
 
 /* changed the type, because the script does not return one value, but all
  * results which are calculated in the file */
@@ -90,9 +131,7 @@ expr:
     { e1 + e2 }
 | e1 = expr MINUS e2 = expr
     { e1 - e2 }
-| e1 = expr TIMES e2 = expr
+| e1 = expr MULT e2 = expr
     { e1 * e2 }
 | e1 = expr DIV e2 = expr
     { e1 / e2 }
-| MINUS e = expr %prec UMINUS
-    { - e }
