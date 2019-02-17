@@ -105,33 +105,112 @@
 %token ASS (* '=' *)
 %token COLONASS (* need to define a name appropriately for ':=' as i yet do not know what it signifies *)
 
+(*Misc Tokens required for our grammar *)
+%token IDENT (*All kinds of identifiers *)
+%token BLANK_I (*Blank identifier *)
+%token LIT_INT
+%token LIT_FLOAT
+%token LIT_BOOL
+%token LIT_RUNE
+%token LIT_STRING
 
+
+(*Alright let us use precedence *)
+%left OROR 
+%left ANDAND
+%left EQ NEQ GT GTEQ LT LTEQ
+%left PLUS MINUS OR XOR
+%left MULT DIV MOD LSHFT RSHFT AND NAND
 
 /* changed the type, because the script does not return one value, but all
  * results which are calculated in the file */
-%start <int list> main
+
+
+(* %start <int list> main *) (*Notice the int list type for the program this would be essential when we start building AST *)
+
+%start <unit> program
+
 
 %%
-
 /* the calculated results are accumalted in an OCaml int list */
+(*)
 main:
-| stmt = statement EOF { [stmt] }
+| stmt = statement EOF { print_string "A statement "}
 | stmt = statement m = main { stmt :: m}
-
+*)
 /* expressions end with a semicolon, not with a newline character */
-statement:
-| e = expr SEMICOLON { e }
 
-expr:
-| i = INT
-    { i }
-| LPAREN e = expr RPAREN
-    { e }
-| e1 = expr PLUS e2 = expr
-    { e1 + e2 }
-| e1 = expr MINUS e2 = expr
-    { e1 - e2 }
-| e1 = expr MULT e2 = expr
-    { e1 * e2 }
-| e1 = expr DIV e2 = expr
-    { e1 / e2 }
+(* CODE WILL NOT COMPILE *)
+
+(* WOULD SUGGEST TESTING THE SCANNER SEPARATE  *)
+
+program :
+    | package { print_string "package"}
+    | declarations { print_string "declarations "}
+;
+
+package : 
+   | PACKAGE IDENT {print_string "Package "}
+;
+
+(*Incomplete *)
+declaration : 
+   | variable_dec 
+   | type_dec
+   | function_dec 
+
+
+(*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
+exp:
+    | exp_0 SEMICOLON {print_string "exp "}
+;
+
+exp_0:
+    | exp_0 OROR exp_1 
+    | exp_1 { print_string "0" } 
+;
+
+exp_1:
+    | exp_1 ANDAND exp_2
+    | exp_2 {print_string "1"}
+;
+exp_2:
+    | exp_2 EQ exp_3
+    | exp_2 NEQ exp_3
+    | exp_2 GT exp_3
+    | exp_2 GTEQ exp_3
+    | exp_2 LT exp_3
+    | exp_2 LTEQ exp_3 {print_string "2"}
+;
+exp_3: 
+    | exp_3 PLUS exp_4
+    | exp_3 MINUS exp_4
+    | exp_3 OR exp_4
+    | exp_3 XOR exp_4 {print_string "3"}
+;
+exp_4:
+    | exp_4 MULT exp_5
+    | exp_4 DIV exp_5
+    | exp_4 MOD exp_5
+    | exp_4 LSHFT exp_5
+    | exp_4 RSHFT exp_5
+    | exp_4 AND exp_5
+    | exp_4 NAND exp_5 {print_string "4"}
+;
+exp_5:
+    | PLUS exp_0
+    | MINUS exp_0
+    | NOT exp_0
+    | XOR exp_0 {print_string "5"}
+    | operand {print_string "operand"}
+;
+operand:
+    | IDENT {print_string "identifier"}
+    | LIT_INT
+    | LIT_BOOL
+    | LIT_FLOAT
+    | LIT_RUNE
+    | LIT_STRING {print_string "Literal"}
+;
+
+(*Still need to add function here. Will do so after defining grammar for function calls *)
