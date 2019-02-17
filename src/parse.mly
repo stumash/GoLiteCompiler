@@ -99,17 +99,14 @@
 %token <int> INT
 %token <string> COMMENT
 %token <string> ID
-%token BLANKID (* bland identifier '_' *)
+%token BLANK_ID (* bland identifier '_' *)
 
-<<<<<<< HEAD:code/parse.mly
 (*Misc Tokens required for our grammar *)
-%token IDENT (*All kinds of identifiers *)
-%token BLANK_I (*Blank identifier *)
-%token LIT_INT
-%token LIT_FLOAT
-%token LIT_BOOL
-%token LIT_RUNE
-%token LIT_STRING
+%token <int>  LIT_INT
+%token <float> LIT_FLOAT
+%token <string> LIT_BOOL (*Check the specs *)
+%token <char> LIT_RUNE 
+%token <string> LIT_STRING
 
 
 (*Alright let us use precedence *)
@@ -118,10 +115,8 @@
 %left EQ NEQ GT GTEQ LT LTEQ
 %left PLUS MINUS OR XOR
 %left MULT DIV MOD LSHFT RSHFT AND NAND
-=======
 %token EOF (* end of file, required *)
 
->>>>>>> 2c7914f82e78b6314c2c813889c6e8fdcc5ede80:src/parse.mly
 
 /* changed the type, because the script does not return one value, but all
  * results which are calculated in the file */
