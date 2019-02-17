@@ -2,5 +2,5 @@
 let () =
   let lexbuf = Lexing.from_channel stdin in
   while true do 
-    Salex.scanner lexbuf;
+    Lexer.scanner lexbuf;
   done

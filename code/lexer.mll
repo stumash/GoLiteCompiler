@@ -3,7 +3,7 @@
 {
 
 open Lexing 
-open Saparse
+open Parse
 
 let num_lines = ref 0
 let num_chars = ref 0
