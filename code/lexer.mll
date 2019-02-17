@@ -55,7 +55,8 @@ rule scanner = parse
   | '_'                     { mpt "%s\n" "blank_identifier"; BLANKID }
   | [' ' '\t']              { scanner lexbuf (* ignore whitespace *) }
   | ['\n']                  { mpt "%s\n" "semicolon"; SEMICOLON }
-  | eof                     { mpt "%s\n" "OK"; EOF}
+  | _                       { print_endline "\nERROR"; exit 1 }
+  | eof                     { mpt "%s\n" "EOF"; EOF}
 
 
 (*trailer
