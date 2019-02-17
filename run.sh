@@ -21,12 +21,6 @@ if [[ -z "${mode}" || ! "${mode}" =~ ^scan|tokens|parse|pretty$ ]]; then
     exit 1
 fi
 
-# check that "build.sh" has been ran
-if [ "$(ls -1 | grep "native")" == "" ]; then
-    echo "ERROR: run build.sh before run.sh"
-    exit 1
-fi
-
 # check that infile is a file
 if [ ! -f "${infile}" ]; then
     echo "ERROR: second argument <infile> does not exist"
@@ -35,17 +29,23 @@ if [ ! -f "${infile}" ]; then
     exit 1
 fi
 
+# check that "build.sh" has been ran
+if [ "$(ls -1 "src" | grep "native")" == "" ]; then
+    echo "ERROR: run build.sh before run.sh"
+    exit 1
+fi
+
 case "${mode}" in
     "scan")
-        ./main_scan.native < "${infile}"
+        ./src/main_scan.native < "${infile}"
         ;;
     "tokens")
-        ./main_tokens.native < "${infile}"
+        ./src/main_tokens.native < "${infile}"
         ;;
     "parse")
-        ./main_parse.native < "${infile}"
+        ./src/main_parse.native < "${infile}"
         ;;
     "pretty")
-        ./main_pretty.native < "${infile}"
+        ./src/main_pretty.native < "${infile}"
         ;;
 esac
