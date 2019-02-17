@@ -1,64 +1,65 @@
-(* header *)
+(* header
+ * ---------- *)
 {
     open Parse
+
+    let should_print_tokens = ref false
+
+    (* mpt - Maybe Print Token *)
+    let mpt s_format s =
+        if not !should_print_tokens then () else
+        Printf.printf s_format s
 }
 
-(* body *)
+(* body
+ * ---------- *)
 
 let digit = ['0'-'9']
-let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9''_']*
-let blank = '_'
+let nz_digit = ['1'-'9'] (* non-zero digit *)
+let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let in_comment = ( [^ '*'] | '*'[^ '/'] )*
 
-(*need to decide on how to split our scanner into parts or should we or can we *)
 rule scanner = parse
-  | "break" as s       { print_string s; sc_place lexbuf }
-  | "case" as s        { print_string s }
-  | "chan" as s        { print_string s }
-  | "const" as s       { print_string s }
-  | "continue" as s    { print_string s; sc_place lexbuf }
-  | "default" as s     { print_string s }
-  | "defer" as s       { print_string s }
-  | "else" as s        { print_string s }
-  | "fallthrough" as s { print_string s; sc_place lexbuf }
-  | "for" as s         { print_string s }
-  | "func" as s        { print_string s }
-  | "go" as s          { print_string s }
-  | "goto" as s        { print_string s }
-  | "if" as s          { print_string s }
-  | "import" as s      { print_string s }
-  | "interface" as s   { print_string s }
-  | "map" as s         { print_string s }
-  | "package" as s     { print_string s }
-  | "range" as s       { print_string s }
-  | "return" as s      { print_string s; sc_place lexbuf }
-  | "select" as s      { print_string s }
-  | "struct" as s      { print_string s }
-  | "switch" as s      { print_string s }
-  | "type" as s        { print_string s }
-  | "var" as s         { print_string s }
-  | "print" as s       { print_string s }
-  | "println" as s     { print_string s }
-  | "append" as s      { print_string s }
-  | "len" as s         { print_string s }
-  | "cap" as s         { print_string s }
-  | "/*"               { print_string "Comment"; comment lexbuf }
-  | id                 { print_string "identifier "; sc_place lexbuf }
-  | blank              { print_string "blank_identifier"; sc_place lexbuf }
-  | [' ' '\t']         { scanner lexbuf }
-  | _ as s             { print_char s; } (* Ignore spaces *)
-  | eof                { print_string "OK"; exit 0 }
-
-and comment = parse
-  | "*/" { scanner lexbuf }
-  | _    { comment lexbuf }
-
-and sc_place = parse
-  | [' ' '\t'] { sc_place lexbuf }
-  | ['\n']     { print_string ";";(*Somehow return a semicolon *) scanner lexbuf }
-  | _          { scanner lexbuf }
+  | "break" as s            { mpt "%s\n" s; BREAK }
+  | "case" as s             { mpt "%s\n" s; CASE }
+  | "chan" as s             { mpt "%s\n" s; CHAN }
+  | "const" as s            { mpt "%s\n" s; CONST }
+  | "continue" as s         { mpt "%s\n" s; CONTINUE }
+  | "default" as s          { mpt "%s\n" s; DEFAULT }
+  | "defer" as s            { mpt "%s\n" s; DEFER }
+  | "else" as s             { mpt "%s\n" s; ELSE }
+  | "fallthrough" as s      { mpt "%s\n" s; FALLTHROUGH }
+  | "for" as s              { mpt "%s\n" s; FOR }
+  | "func" as s             { mpt "%s\n" s; FUNC }
+  | "go" as s               { mpt "%s\n" s; GO }
+  | "goto" as s             { mpt "%s\n" s; GOTO }
+  | "if" as s               { mpt "%s\n" s; IF }
+  | "import" as s           { mpt "%s\n" s; IMPORT }
+  | "interface" as s        { mpt "%s\n" s; INTERFACE }
+  | "map" as s              { mpt "%s\n" s; MAP }
+  | "package" as s          { mpt "%s\n" s; PACKAGE }
+  | "range" as s            { mpt "%s\n" s; RANGE }
+  | "return" as s           { mpt "%s\n" s; RETURN }
+  | "select" as s           { mpt "%s\n" s; SELECT }
+  | "struct" as s           { mpt "%s\n" s; STRUCT }
+  | "switch" as s           { mpt "%s\n" s; SWITCH }
+  | "type" as s             { mpt "%s\n" s; TYPE }
+  | "var" as s              { mpt "%s\n" s; VAR }
+  | "print" as s            { mpt "%s\n" s; PRINT }
+  | "println" as s          { mpt "%s\n" s; PRINTLN }
+  | "append" as s           { mpt "%s\n" s; APPEND }
+  | "len" as s              { mpt "%s\n" s; LEN }
+  | "cap" as s              { mpt "%s\n" s; CAP }
+  | "/*"in_comment"*/" as s { mpt "comment(%s)\n" s; COMMENT s }
+  | id as s                 { mpt "identifier(%s)\n" s; ID s }
+  | '_'                     { mpt "%s\n" "blank_identifier"; BLANKID }
+  | [' ' '\t']              { scanner lexbuf (* ignore whitespace *) }
+  | ['\n']                  { mpt "%s\n" "semicolon"; SEMICOLON }
+  | eof                     { mpt "%s\n" "OK"; EOF}
 
 
-(*trailer *)
+(*trailer
+ * ---------- *)
 {
-
+    (* nothing *)
 }

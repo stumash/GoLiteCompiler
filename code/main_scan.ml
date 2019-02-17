@@ -1,6 +1,7 @@
 (* main *)
 let _ =
     let lexbuf = Lexing.from_channel stdin in
-    while true do
-        Lexer.scanner lexbuf
+    Lexer.should_print_tokens := true;
+    while Lexer.scanner lexbuf != EOF do
+        ()
     done

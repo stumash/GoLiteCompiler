@@ -12,8 +12,6 @@
 /*                                                                        */
 /**************************************************************************/
 
-/*KeyWord Tokens */
-
 %token BREAK
 %token CASE
 %token CHAN
@@ -54,57 +52,56 @@
 %token COLON (* : *)
 %token COMMA (* , *)
 %token DOT (* . *)
-
 %token ELLIPSIS (* ... *)
-
-%token <int> INT
-(*
-%token PLUS MINUS TIMES DIV
-*)
-%token EOF (* end of file *)
-
-(*decide whether we use precedence directives or just normal and create our grammer to be correct *)
-(*
-%left PLUS MINUS        /* lowest precedence */
-%left TIMES DIV         /* medium precedence */
-%nonassoc UMINUS        /* highest precedence */
-*)
 
 (* Arithmetic operators *)
 %token PLUS MINUS (* '+' '-' *)
 %token MULT DIV (* '*' '/' *)
 %token MOD (* '%' *)
 
+(* do we want to use precedence directives or factor the grammar? *)
+(*
+%left PLUS MINUS        /* lowest precedence */
+%left TIMES DIV         /* medium precedence */
+%nonassoc UMINUS        /* highest precedence */
+*)
+
 (* Logical Operators *)
-%token AND OR (* '&' '|' *)
+%token LAND LOR (* '&' '|' *)
 %token XOR (* '^' *)
 %token LSHFT RSHFT (* '<<' '>>' *)
 %token NAND (* '&^' *)
 %token NOT (* '!' *)
 
 (* Shorthand Arithmetic *)
-%token SPLUS SMINUS (* '+=' '-=' *)
-%token SMULT SDIV (* '*=' '/=' *)
-%token SMOD (* '%=' *)
+%token PLUSEQ MINUSEQ (* '+=' '-=' *)
+%token MULTEQ DIVEQ (* '*=' '/=' *)
+%token MODEQ (* '%=' *)
 
 (* Shorthand Logical *)
-%token SAND SOR (* '&=' '|=' *)
-%token SXOR (* '^=' *)
-%token SLSHFT SRSHFT (* '<<=' '>>=' *)
-%token SNAND (* '&^=' *)
+%token LANDEQ LOREQ (* '&=' '|=' *)
+%token XOREQ (* '^=' *)
+%token LSHFTEQ SRSHFTEQ (* '<<=' '>>=' *)
+%token NANDEQ (* '&^=' *)
 
 (* Relational Operators *)
 %token EQ NEQ (* '==' '!=' *)
 %token LT LTEQ (* '<' '<=' *)
 %token GT GTEQ (* '>' '>=' *)
-%token ANDAND OROR (* '&&' '||' *)
+%token AND OR (* '&&' '||' *)
 
 (* Misc Operators *)
 %token CH (* '<-' *)
 %token INC DEC (* '++' '--' *)
-%token ASS (* '=' *)
-%token COLONASS (* need to define a name appropriately for ':=' as i yet do not know what it signifies *)
+%token ASG (* assign '=' *)
+%token IASG (* assign with inference ':=' *)
 
+%token <int> INT
+%token <string> COMMENT
+%token <string> ID
+%token BLANKID (* bland identifier '_' *)
+
+%token EOF (* end of file, required *)
 
 
 /* changed the type, because the script does not return one value, but all
