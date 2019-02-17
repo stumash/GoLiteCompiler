@@ -52,12 +52,13 @@ rule scanner = parse
   | "cap" as s              { mpt "%s\n" s; CAP }
   | "/*"in_comment"*/" as s { mpt "comment(%s)\n" s; COMMENT s }
   | id as s                 { mpt "identifier(%s)\n" s; ID s }
-  | '_'                     { mpt "%s\n" "blank_identifier"; BLANKID }
+  | '_'                     { mpt "%s\n" "blank_identifier"; BLANK_ID }
   | [' ' '\t']              { scanner lexbuf (* ignore whitespace *) }
   | ['\n']                  { mpt "%s\n" "semicolon"; SEMICOLON }
   | _                       { print_endline "\nERROR"; exit 1 }
   | eof                     { mpt "%s\n" "EOF"; EOF}
 
+(*need to add operators and other misc symbols to the grammar above *)
 
 (*trailer
  * ---------- *)

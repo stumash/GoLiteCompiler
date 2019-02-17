@@ -12,6 +12,8 @@
 /*                                                                        */
 /**************************************************************************/
 
+
+(* Keywords *)
 %token BREAK
 %token CASE
 %token CHAN
@@ -38,6 +40,7 @@
 %token TYPE
 %token VAR
 
+(*Misc functions *)
 %token PRINTLN
 %token PRINT
 %token APPEND
@@ -110,6 +113,8 @@
 
 
 (*Alright let us use precedence *)
+(*But still will need to mention level wise precedence grammar *)
+(* Will be easier to understand too *)
 %left OROR 
 %left ANDAND
 %left EQ NEQ GT GTEQ LT LTEQ
@@ -124,6 +129,7 @@
 
 (* %start <int list> main *) (*Notice the int list type for the program this would be essential when we start building AST *)
 
+(*have set it as UNit for now  need to change if required*)
 %start <unit> program
 
 
@@ -143,6 +149,7 @@ main:
 program :
     | package { print_string "package"}
     | declarations { print_string "declarations "}
+    | misc  {print_string "misc"} (*print statemtns as well as append (remove if not required later )*)
 ;
 
 package : 
@@ -155,8 +162,19 @@ declaration :
    | type_dec
    | function_dec 
 
+(*Put variable declarations here  *)
+
+
+(*Put type declarations here *)
+
+
+(* I will put function declaration here *)
+
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
+(*Need to add function calls which will be defined after this *)
+
+(* Need to change if expression is called by placing semicolon in statement before *)
 exp:
     | exp_0 SEMICOLON {print_string "exp "}
 ;
@@ -193,6 +211,8 @@ exp_4:
     | exp_4 AND exp_5
     | exp_4 NAND exp_5 {print_string "4"}
 ;
+
+(*Unary based oeprations since the priority is the highest*)
 exp_5:
     | PLUS exp_0
     | MINUS exp_0
