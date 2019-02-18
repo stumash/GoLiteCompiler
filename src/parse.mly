@@ -39,7 +39,7 @@
 %token TYPE
 %token VAR
 
-(*Misc functions *)
+(* Keyword Functions *)
 %token PRINTLN
 %token PRINT
 %token APPEND
@@ -62,33 +62,33 @@
 %token MULT DIV (* '*' '/' *)
 %token MOD (* '%' *)
 
-(* Logical Operators *)
-%token LAND LOR (* '&' '|' *)
+(* Bitwise Operators *)
+%token BAND BOR (* '&' '|' *)
 %token XOR (* '^' *)
 %token LSHFT RSHFT (* '<<' '>>' *)
 %token NAND (* '&^' *)
-%token NOT (* '!' *)
 
-(* Shorthand Arithmetic *)
+(* Arithmetic Assignment *)
 %token PLUSEQ MINUSEQ (* '+=' '-=' *)
 %token MULTEQ DIVEQ (* '*=' '/=' *)
 %token MODEQ (* '%=' *)
 %token INC DEC (* '++' '--' *)
 
-(* Shorthand Logical *)
-%token LANDEQ LOREQ (* '&=' '|=' *)
+(* Bitwise Assignment *)
+%token BANDEQ BOREQ (* '&=' '|=' *)
 %token XOREQ (* '^=' *)
-%token LSHFTEQ SRSHFTEQ (* '<<=' '>>=' *)
+%token LSHFTEQ RSHFTEQ (* '<<=' '>>=' *)
 %token NANDEQ (* '&^=' *)
 
-(* Relational Operators *)
+(* Comparison Operators *)
 %token EQ NEQ (* '==' '!=' *)
 %token LT LTEQ (* '<' '<=' *)
 %token GT GTEQ (* '>' '>=' *)
 %token AND OR (* '&&' '||' *)
+%token NOT (* '!' *)
 
 (* Assignment Operators *)
-%token CH (* '<-' *)
+%token CHASG (* '<-' *)
 %token ASG (* assign '=' *)
 %token IASG (* assign with inference ':=' *)
 
@@ -97,17 +97,15 @@
 (* Parametrized Tokens *)
 %token <string> COMMENT
 %token <string> IDENT
-%token <int> LIT_INT
-%token <float> LIT_FLOAT
-%token <bool> LIT_BOOL
-%token <string> LIT_RUNE
-%token <string> LIT_STRING
+%token <int> LITINT
+%token <float> LITFLOAT
+%token <bool> LITBOOL
+%token <string> LITRUNE
+%token <string> LITSTRING
 
-%token EOF (* end of file, required *)
+(* end-of-file, required *)
+%token EOF
 
-(*Alright let us use precedence *)
-(*But still will need to mention level wise precedence grammar *)
-(* Will be easier to understand too *)
 (* Operator Precedence *)
 %left OR
 %left AND
@@ -115,9 +113,9 @@
 %left PLUS MINUS LOR XOR
 %left MULT DIV MOD LSHFT RSHFT LAND NAND
 
+
 /* changed the type, because the script does not return one value, but all
  * results which are calculated in the file */
-
 
 (* %start <int list> main *) (*Notice the int list type for the program this would be essential when we start building AST *)
 
@@ -211,11 +209,11 @@ exp_5 :
 
 operand :
     | IDENT {print_string "identifier"}
-    | LIT_INT
-    | LIT_BOOL
-    | LIT_FLOAT
-    | LIT_RUNE
-    | LIT_STRING {print_string "Literal"}
+    | LITINT
+    | LITBOOL
+    | LITFLOAT
+    | LITRUNE
+    | LITSTRING {print_string "Literal"}
 ;
 
 (*Still need to add function here. Will do so after defining grammar for function calls *)
