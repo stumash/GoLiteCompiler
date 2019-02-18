@@ -74,7 +74,7 @@
 %token MODEQ (* '%=' *)
 %token INC DEC (* '++' '--' *)
 
-(* Bitwise Assignment *)
+(* Bitwise Assignment (Shorthand version) *)
 %token BANDEQ BOREQ (* '&=' '|=' *)
 %token XOREQ (* '^=' *)
 %token LSHFTEQ RSHFTEQ (* '<<=' '>>=' *)
@@ -132,6 +132,7 @@
 %%
 /* the calculated results are accumalted in an OCaml int list */
 
+(*The entire program is a collection of declarations statements and packages *)
 program :
     | package declarations statements { print_endline "top level" }
 ;
@@ -162,12 +163,66 @@ type_dec :
 ;
 
 (* Akshay will put function declaration here *)
+
+(* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
 function_dec :
-    | FUNC LPAREN RPAREN LCURLY statements RCURLY {  }
+    | FUNC IDENT LPAREN frame RPAREN ret LCURLY statements RCURLY {  }
+;
+
+(*Frame is the set of parameters of the function *)
+frame : 
+    | { (* No parameters *)} 
+    | IDENT c { }
+;
+
+(* c is defined to take into account the two different styles to specify parameters *)
+c : 
+    | COMMA frame 
+    | TYPE d  { } 
+;
+
+(* The second style  (Added extra to avoid shift reduce conflict by specifying it in rule c) *)
+d : 
+    | { (* Empty which tells us the end of the parameter set *)}
+    | COMMA frame {(* Which tells there are more parameters to go *)}
+;
+
+(* Added this but subject to change after discussion as return type can be NULL *)
+ret : 
+    | {(* No return type *)}
+    | TYPE { print_string "some type "}
+;
+
+(*Print and print_ln staterments *)
+print_statement : 
+    | PRINT LPAREN exp_list RPAREN 
+    | PRINTLN LPAREN exp_list RPAREN { print_string "Printing something " }
+;
+
+(*list of expressions *)
+exp_list :
+    | { (* Empty list *)}
+    | exp
+    | exp_list COMMA exp { print_string "List of expressions" }
+
+(* return statement *)
+ret_st :
+    | RETURN exp { print_string "Return statement "}
+;
+
+(*For statements *)
+for_loop :
+    | FOR loop_type { print_string "For" }
+;
+
+(*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
+loop_type : 
+    | LCURLY statements RCURLY {print_string "Infinite loop"}
+    | exp LCURLY statements RCURLY {print_string "While loop "}
+    | statement SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_string "Normal Loop"}
 ;
 
 (* statements *)
-
 statements :
     | statements statement {  }
     | { print_string "empty statements" }
