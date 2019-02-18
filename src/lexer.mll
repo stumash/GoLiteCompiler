@@ -17,7 +17,7 @@
 let digit = ['0'-'9']
 let nz_digit = ['1'-'9'] (* non-zero digit *)
 let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
-let in_comment = ( [^ '*'] | '*''*'* [^ '/'] )*
+let comment = "/*" ( [^ '*'] | '*''*'* [^ '/'] )* '*''*'* '/'
 
 rule scanner = parse
   | "break" as s            { mpt "%s\n" s; BREAK }
@@ -50,7 +50,7 @@ rule scanner = parse
   | "append" as s           { mpt "%s\n" s; APPEND }
   | "len" as s              { mpt "%s\n" s; LEN }
   | "cap" as s              { mpt "%s\n" s; CAP }
-  | "/*"in_comment"*/" as s { mpt "comment(%s)\n" s; COMMENT s }
+  | comment as s            { mpt "comment(%s)\n" s; COMMENT s }
   | id as s                 { mpt "identifier(%s)\n" s; IDENT s }
   | '_'                     { mpt "%s\n" "blank_identifier"; BLANKID }
   | [' ' '\t']              { scanner lexbuf (* ignore whitespace *) }
