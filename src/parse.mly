@@ -119,41 +119,57 @@
 
 (* %start <int list> main *) (*Notice the int list type for the program this would be essential when we start building AST *)
 
-(*have set it as UNit for now  need to change if required*)
+(*have set it as unit for now  need to change if required*)
 %start <unit> program
 
 
 %%
 /* the calculated results are accumalted in an OCaml int list */
 
-(* CODE WILL NOT COMPILE *)
-
-(* WOULD SUGGEST TESTING THE SCANNER SEPARATE  *)
-
 program :
-    | package { print_string "package"}
-    (*| declarations { print_string "declarations "}*)
-    (*| misc {print_string "misc"} print statemtns as well as append (remove if not required later )*)
+    | package declarations statements { print_endline "top level" }
 ;
 
 package :
-   | PACKAGE IDENT {print_string "Package "}
+    | PACKAGE IDENT { print_string "Package" }
 ;
 
-(*Incomplete *)
-(*declaration :*)
-   (*| variable_dec*)
-   (*| type_dec*)
-   (*| function_dec*)
+(* declarations *)
 
-(*Put variable declarations here  *)
+declarations :
+    | declarations declaration {  }
+    | { print_string "empty declarations" }
+;
 
+declaration :
+    | variable_dec {  }
+    | type_dec {  }
+    | function_dec {  }
+;
 
-(*Put type declarations here *)
+variable_dec :
+    | VAR IDENT IDENT {  }
+;
 
+type_dec :
+    | TYPE IDENT IDENT {  }
+;
 
-(* I will put function declaration here *)
+(* Akshay will put function declaration here *)
+function_dec :
+    | FUNC LPAREN RPAREN LCURLY statements RCURLY {  }
+;
 
+(* statements *)
+
+statements :
+    | statements statement {  }
+    | { print_string "empty statements" }
+;
+
+statement :
+    | IDENT ASG exp {  }
+;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
 (*Need to add function calls which will be defined after this *)
