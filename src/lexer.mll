@@ -1,5 +1,6 @@
 (* header
  * ---------- *)
+
 {
     open Parse
     open Utils
@@ -7,9 +8,9 @@
     let should_print_tokens = ref false
 
     (* mpt - Maybe Print Token *)
-    let mpt s_format s =
+    let mpt s_format x =
         if not !should_print_tokens then () else
-        Printf.printf s_format s
+        Printf.printf s_format x
 }
 
 (* body
@@ -135,6 +136,7 @@ rule scanner = parse
 
 (*trailer
  * ---------- *)
+
 {
     (* nothing *)
 }
