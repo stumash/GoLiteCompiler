@@ -205,16 +205,16 @@ ret_st :
 ;
 
 (*For statements *)
-for :
-    | FOR loop_type
+for_loop :
+    | FOR loop_type { print_string "For" }
 ;
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type : 
     | LCURLY statements RCURLY {print_string "Infinite loop"}
     | exp LCURLY statements RCURLY {print_string "While loop "}
-    | statment SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_string "Normal Loop"}
-
+    | statement SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_string "Normal Loop"}
+;
 
 (* statements *)
 statements :
