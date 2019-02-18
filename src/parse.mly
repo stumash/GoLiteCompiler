@@ -39,6 +39,7 @@
 %token TYPE
 %token VAR
 
+(*Misc functions *)
 %token PRINTLN
 %token PRINT
 %token APPEND
@@ -104,6 +105,9 @@
 
 %token EOF (* end of file, required *)
 
+(*Alright let us use precedence *)
+(*But still will need to mention level wise precedence grammar *)
+(* Will be easier to understand too *)
 (* Operator Precedence *)
 %left OR
 %left AND
@@ -111,13 +115,13 @@
 %left PLUS MINUS LOR XOR
 %left MULT DIV MOD LSHFT RSHFT LAND NAND
 
-
 /* changed the type, because the script does not return one value, but all
  * results which are calculated in the file */
 
 
 (* %start <int list> main *) (*Notice the int list type for the program this would be essential when we start building AST *)
 
+(*have set it as UNit for now  need to change if required*)
 %start <unit> program
 
 
@@ -131,6 +135,7 @@
 program :
     | package { print_string "package"}
     (*| declarations { print_string "declarations "}*)
+    (*| misc {print_string "misc"} print statemtns as well as append (remove if not required later )*)
 ;
 
 package :
@@ -143,8 +148,18 @@ package :
    (*| type_dec*)
    (*| function_dec*)
 
+(*Put variable declarations here  *)
+
+
+(*Put type declarations here *)
+
+
+(* I will put function declaration here *)
+
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
+(*Need to add function calls which will be defined after this *)
+(* Need to change if expression is called by placing semicolon in statement before *)
 exp :
     | exp_0 SEMICOLON {print_string "exp "}
 ;
@@ -158,6 +173,7 @@ exp_1 :
     | exp_1 AND exp_2
     | exp_2 {print_string "1"}
 ;
+
 exp_2 :
     | exp_2 EQ exp_3
     | exp_2 NEQ exp_3
@@ -166,12 +182,14 @@ exp_2 :
     | exp_2 LT exp_3
     | exp_2 LTEQ exp_3 {print_string "2"}
 ;
+
 exp_3 :
     | exp_3 PLUS exp_4
     | exp_3 MINUS exp_4
     | exp_3 OR exp_4
     | exp_3 XOR exp_4 {print_string "3"}
 ;
+
 exp_4 :
     | exp_4 MULT exp_5
     | exp_4 DIV exp_5
@@ -181,13 +199,16 @@ exp_4 :
     | exp_4 AND exp_5
     | exp_4 NAND exp_5 {print_string "4"}
 ;
+
 exp_5 :
+(*Unary based oeprations since the priority is the highest*)
     | PLUS exp_0
     | MINUS exp_0
     | NOT exp_0
     | XOR exp_0 {print_string "5"}
     | operand {print_string "operand"}
 ;
+
 operand :
     | IDENT {print_string "identifier"}
     | LIT_INT

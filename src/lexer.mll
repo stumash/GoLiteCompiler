@@ -58,6 +58,7 @@ rule scanner = parse
   | _                       { print_endline "\nERROR"; exit 1 }
   | eof                     { mpt "%s\n" "EOF"; EOF}
 
+(*need to add operators and other misc symbols to the grammar above *)
 
 (*trailer
  * ---------- *)
