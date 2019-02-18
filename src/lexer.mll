@@ -121,11 +121,11 @@ rule scanner = parse
 (* parametrized *)
   | comment as s          { mpt "comment(%s)\n" s; COMMENT s }
   | id as s               { mpt "identifier(%s)\n" s; IDENT s }
-  | lit_int as s           { mpt "lit_int(%s)\n" s; LIT_INT (int_of_string s) }
-  | lit_float as s         { mpt "lit_float(%s)\n" s; LIT_FLOAT (float_of_string s) }
-  | lit_bool as s          { mpt "lit_bool(%s)\n" s; LIT_BOOL (bool_of_string s) }
-  | lit_string as s        { mpt "lit_string(%s)\n" s; LIT_STRING s }
-  | lit_rune as s          { mpt "lit_rune(%s)\n" s; LIT_RUNE s }
+  | lit_int as s          { mpt "lit_int(%s)\n" s; LIT_INT (int_of_string s) }
+  | lit_float as s        { mpt "lit_float(%s)\n" s; LIT_FLOAT (float_of_string s) }
+  | lit_bool as s         { mpt "lit_bool(%s)\n" s; LIT_BOOL (bool_of_string s) }
+  | lit_string as s       { mpt "lit_string(%s)\n" s; LIT_STRING s }
+  | lit_rune as s         { mpt "lit_rune(%s)\n" s; LIT_RUNE s }
 (* special *)
   | [' ' '\t']            { scanner lexbuf (* ignore whitespace *) }
   | ['\n']                { mpt "%s\n" "semicolon"; SEMICOLON }
