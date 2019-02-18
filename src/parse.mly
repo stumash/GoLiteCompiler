@@ -97,11 +97,11 @@
 (* Parametrized Tokens *)
 %token <string> COMMENT
 %token <string> IDENT
-%token <int> LITINT
-%token <float> LITFLOAT
-%token <bool> LITBOOL
-%token <string> LITRUNE
-%token <string> LITSTRING
+%token <int> LIT_INT
+%token <float> LIT_FLOAT
+%token <bool> LIT_BOOL
+%token <string> LIT_RUNE
+%token <string> LIT_STRING
 
 (* end-of-file, required *)
 %token EOF
@@ -209,11 +209,11 @@ exp_5 :
 
 operand :
     | IDENT {print_string "identifier"}
-    | LITINT
-    | LITBOOL
-    | LITFLOAT
-    | LITRUNE
-    | LITSTRING {print_string "Literal"}
+    | LIT_INT
+    | LIT_BOOL
+    | LIT_FLOAT
+    | LIT_RUNE
+    | LIT_STRING {print_string "Literal"}
 ;
 
 (*Still need to add function here. Will do so after defining grammar for function calls *)

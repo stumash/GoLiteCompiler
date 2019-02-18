@@ -2,6 +2,7 @@
  * ---------- *)
 {
     open Parse
+    open Utils
 
     let should_print_tokens = ref false
 
@@ -17,14 +18,23 @@
 let digit = ['0'-'9']
 let nzdigit = ['1'-'9'] (* non-zero digit *)
 let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
-let comment = '/''*' ( [^ '*'] | '*''*'* [^ '/'] )* '*''*'* '/'
 
-(* TODO: literals *)
-let litint = digit*
-let litfloat = digit*
-let litbool = "true" | "false"
-let litstring = '"' "TODO"* '"'
-let litrune = '\'' "TODO"* '\''
+let line_comment = '/''/'[^ '\n']*
+let block_comment = '/''*' ( [^ '*'] | '*''*'* [^ '/'] )* '*''*'* '/'
+let comment = line_comment | block_comment
+
+(* literals *)
+let lit_decimal = "TODO"
+let lit_octal = "TODO"
+let lit_hexadecimal = "TODO"
+let lit_int = lit_decimal | lit_octal | lit_hexadecimal
+
+let lit_float = digit*
+
+let lit_bool = "true" | "false"
+
+let lit_string = '"' "TODO"* '"'
+let lit_rune = '\'' "TODO"* '\''
 
 rule scanner = parse
 (* keywords *)
@@ -110,11 +120,11 @@ rule scanner = parse
 (* parametrized *)
   | comment as s          { mpt "comment(%s)\n" s; COMMENT s }
   | id as s               { mpt "identifier(%s)\n" s; IDENT s }
-  | litint as s           { mpt "litint(%s)\n" s; LITINT (int_of_string s) }
-  | litfloat as s         { mpt "litfloat(%s)\n" s; LITFLOAT (float_of_string s) }
-  | litbool as s          { mpt "litbool(%s)\n" s; LITBOOL (bool_of_string s) }
-  | litstring as s        { mpt "litstring(%s)\n" s; LITSTRING s }
-  | litrune as s          { mpt "litrune(%s)\n" s; LITRUNE s }
+  | lit_int as s           { mpt "lit_int(%s)\n" s; LIT_INT (int_of_string s) }
+  | lit_float as s         { mpt "lit_float(%s)\n" s; LIT_FLOAT (float_of_string s) }
+  | lit_bool as s          { mpt "lit_bool(%s)\n" s; LIT_BOOL (bool_of_string s) }
+  | lit_string as s        { mpt "lit_string(%s)\n" s; LIT_STRING s }
+  | lit_rune as s          { mpt "lit_rune(%s)\n" s; LIT_RUNE s }
 (* special *)
   | [' ' '\t']            { scanner lexbuf (* ignore whitespace *) }
   | ['\n']                { mpt "%s\n" "semicolon"; SEMICOLON }
