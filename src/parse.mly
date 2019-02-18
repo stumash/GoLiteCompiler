@@ -122,6 +122,12 @@
 (*have set it as unit for now  need to change if required*)
 %start <unit> program
 
+(*
+- In the formal grammar, semicolons are terminators, as in C.
+- A semicolon is automatically inserted by the lexer if a line's last token is an identifier, a basic literal, or one of the following tokens: break continue fallthrough return ++ -- ) }
+- A semicolon may be omitted before a closing ) or } .
+*)
+
 
 %%
 /* the calculated results are accumalted in an OCaml int list */

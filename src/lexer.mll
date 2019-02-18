@@ -1,9 +1,5 @@
-(* header
- * ---------- *)
-
-{
+{ (* Contents of generated lexer.ml *)
     open Parse
-    open Utils
 
     let should_print_tokens = ref false
 
@@ -13,29 +9,36 @@
         Printf.printf s_format x
 }
 
-(* body
- * ---------- *)
+
+(* pattern definitions *)
 
 let digit = ['0'-'9']
+let digits = digit digit*
 let nzdigit = ['1'-'9'] (* non-zero digit *)
+let octal_digit = ['0'-'7']
+let hex_digit = ['0'-'9' 'a'-'f' 'A'-'F']
+
 let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 let line_comment = '/''/'[^ '\n']*
 let block_comment = '/''*' ( [^ '*'] | '*''*'* [^ '/'] )* '*''*'* '/'
 let comment = line_comment | block_comment
 
-(* literals *)
-let lit_decimal = "TODO"
-let lit_octal = "TODO"
-let lit_hexadecimal = "TODO"
+let lit_decimal = '0' | nzdigit digit*
+let lit_octal = '0' octal_digit*
+let lit_hexadecimal = '0'['x''X'] hex_digit hex_digit*
 let lit_int = lit_decimal | lit_octal | lit_hexadecimal
 
-let lit_float = digit*
+let expon = ['e''E'] ['+''-'] digit digit*
+let lit_float =  digits '.' digit* expon? | digit* '.' digits expon?
 
 let lit_bool = "true" | "false"
 
 let lit_string = '"' "TODO"* '"'
 let lit_rune = '\'' "TODO"* '\''
+
+
+(* lexer *)
 
 rule scanner = parse
 (* keywords *)
@@ -121,9 +124,9 @@ rule scanner = parse
 (* parametrized *)
   | comment as s          { mpt "comment(%s)\n" s; COMMENT s }
   | id as s               { mpt "identifier(%s)\n" s; IDENT s }
-  | lit_int as s          { mpt "lit_int(%s)\n" s; LIT_INT (int_of_string s) }
-  | lit_float as s        { mpt "lit_float(%s)\n" s; LIT_FLOAT (float_of_string s) }
-  | lit_bool as s         { mpt "lit_bool(%s)\n" s; LIT_BOOL (bool_of_string s) }
+  | lit_int as s          { mpt "lit_int(%s)\n" s; LIT_INT (Helpers.sgi2i s) }
+  | lit_float as s        { mpt "lit_float(%s)\n" s; LIT_FLOAT (Helpers.sgf2f s) }
+  | lit_bool as s         { mpt "lit_bool(%s)\n" s; LIT_BOOL (Helpers.sgb2b s) }
   | lit_string as s       { mpt "lit_string(%s)\n" s; LIT_STRING s }
   | lit_rune as s         { mpt "lit_rune(%s)\n" s; LIT_RUNE s }
 (* special *)
