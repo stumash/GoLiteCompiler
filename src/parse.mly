@@ -134,7 +134,12 @@
 
 (*The entire program is a collection of declarations statements and packages *)
 program :
-    | package declarations statements { print_endline "top level" }
+    | package declarations statements op { print_endline "top level" }
+;
+
+op : 
+    | SEMICOLON {} 
+    |   {} 
 ;
 
 package :
@@ -170,21 +175,20 @@ function_dec :
 ;
 
 (*Frame is the set of parameters of the function *)
-frame :
-    | { (* No parameters *)}
-    | IDENT c { }
+frame : 
+    | { (* No parameters *)} 
+    | c { }
 ;
 
 (* c is defined to take into account the two different styles to specify parameters *)
-c :
-    | COMMA frame
-    | TYPE d  { }
+c : 
+    | IDENT d  { } 
 ;
 
 (* The second style  (Added extra to avoid shift reduce conflict by specifying it in rule c) *)
-d :
-    | { (* Empty which tells us the end of the parameter set *)}
-    | COMMA frame {(* Which tells there are more parameters to go *)}
+d : 
+    | TYPE COMMA c{ }
+    | COMMA c {(* Which tells there are more parameters to go *)}
 ;
 
 (* Added this but subject to change after discussion as return type can be NULL *)
