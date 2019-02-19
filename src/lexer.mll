@@ -1,4 +1,6 @@
-{ (* Contents of generated lexer.ml *)
+{
+    (* Add to contents of generated lexer.ml *)
+
     open Parse
 
     let should_print_tokens = ref false
@@ -34,8 +36,9 @@ let lit_float =  digits '.' digit* expon? | digit* '.' digits expon?
 
 let lit_bool = "true" | "false"
 
-let lit_string = '"' "TODO"* '"'
-let lit_rune = '\'' "TODO"* '\''
+let escape_char = "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v" | "\\\\"
+let lit_rune = '\'' ([^ '\t' '\n' '\'' '\\'] | escape_char | "\\'" ) '\''
+let lit_string = '"' ([^ '\\' '"'] | escape_char | "\\\"") '"'
 
 
 (* lexer *)
@@ -135,7 +138,6 @@ rule scanner = parse
   | _                     { print_endline "\nERROR"; exit 1 }
   | eof                   { mpt "%s\n" "EOF"; EOF}
 
-(*need to add operators and other misc symbols to the grammar above *)
 
 (*trailer
  * ---------- *)
