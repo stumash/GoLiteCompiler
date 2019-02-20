@@ -13,14 +13,10 @@
     let last_token = ref EOF
     let slt_returns_eof = ref false
 
-    (* slt - Set Last Token *)
+    (* slt - Set Last Token (and return it, unless slt_returns_eof is true) *)
     let slt tok =
         last_token := tok;
         if !slt_returns_eof then EOF else tok
-
-    let slt2 tok = (* no check for slt_returns_eof *)
-        last_token := tok;
-        tok
 
     (* https://golang.org/ref/spec#Semicolons (Rule 1 only) *)
     let is_stmt_end tok =
@@ -164,7 +160,7 @@ rule scanner = parse
                           }
   | eof                   { slt_returns_eof := true;
                             if !last_token != SEMICOLON then
-                              ( mpt "%s\n" ";"; slt2 SEMICOLON )
+                              ( mpt "%s\n" ";"; last_token := SEMICOLON; tok SEMICOLON )
                             else
                               ( mpt "%s\n" "EOF"; EOF )
                           }
