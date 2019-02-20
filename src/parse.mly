@@ -167,7 +167,6 @@ type_dec :
     | TYPE IDENT versions {  }
 ;
 
-
 (*Other types include 
  * Basic
  * SLices
@@ -186,12 +185,10 @@ versions:
 structs : 
     | TYPE STRUCT LCURLY struct_body RCURLY { }
 ;
-
 struct_body: 
     | { }
     | IDENT body_2 { }
 ;
-
 body_2: 
     | versions struct_body  { }
     | COMMA IDENT body_2 { }
@@ -234,11 +231,6 @@ exp_list :
     | exp
     | exp_list COMMA exp { print_string "List of expressions" }
 
-(* return statement *)
-ret_st :
-    | RETURN exp { print_string "Return statement "}
-;
-
 (*For statements *)
 for_loop :
     | FOR loop_type { print_string "For" }
@@ -257,8 +249,27 @@ statements :
     | { print_string "empty statements" }
 ;
 
+
+(*Left to add in statment (please chekc if i missed something): 
+    * ASSIGNMENT 
+    * IF 
+    * SWITCH 
+    * INCREAMENT / DECREEAMNET
+    * SHORTHAND DECLARATIONS (havent seen so far )
+    * ARRAY, SLICE, STRUCT element accesses
+    * append function
+    *)
 statement :
+    | LCURLY statements RCURLY { } (*block level statements *)
     | IDENT ASG exp {  }
+    | declarations { }
+    | for_loop { } 
+    | print_statement { }
+    | RETURN exp SEMICOLON { }
+    | BREAK SEMICOLON { }
+    | CONTINUE SEMICOLON { }
+    | exp { } (* Quite weirdly expression statements are valid *)
+
 ;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
@@ -322,4 +333,4 @@ operand :
     | LIT_STRING {print_string "Literal"}
 ;
 
-(* Still need to add function here. Will do so after defining grammar for function calls *)
+(*Will define grammar for function calls as well as other accesses like array, slice struct elements access *)
