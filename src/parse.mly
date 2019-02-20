@@ -160,7 +160,7 @@ declaration :
 ;
 
 variable_dec :
-    | VAR IDENT IDENT {  }
+    | VAR IDENT versions {  }
 ;
 
 type_dec :
@@ -204,14 +204,14 @@ function_dec :
 
 (*Frame is the set of parameters of the function *)
 frame : 
-    | { (* No parameters *)} 
+    | { (* No more parameters *)} 
     | IDENT c { }
 ;
 
 
 (* c is defined to take into account the two different styles to specify parameters *)
 c : 
-    | version frame   { }
+    | versions frame   { }
     | COMMA IDENT c  { }
 ;
 
