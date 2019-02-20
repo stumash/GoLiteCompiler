@@ -246,6 +246,7 @@ loop_type :
 (* statements *)
 statements :
     | statements statement {  }
+    | LCURLY statements RCURLY { } (*block level statements *)
     | { print_string "empty statements" }
 ;
 
@@ -260,7 +261,6 @@ statements :
     * append function
     *)
 statement :
-    | LCURLY statements RCURLY { } (*block level statements *)
     | IDENT ASG exp {  }
     | declarations { }
     | for_loop { } 
