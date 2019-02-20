@@ -164,10 +164,46 @@ variable_dec :
 ;
 
 type_dec :
-    | TYPE IDENT IDENT {  }
+    | TYPE IDENT versions {  }
 ;
 
-(* Akshay will put function declaration here *)
+
+(*Other types include 
+ * Basic
+ * SLices
+ * Arrays 
+ * Structs *)
+
+(*version to encompass all above mentioned stuff of tyeps *)
+versions: 
+    | basic { } 
+    | slices { } 
+    | arrays { }
+    | structs { }
+;
+
+(*basic type woudl jsut be an identifier *)
+basic : 
+    | IDENT { }
+;
+
+(*Slices *)
+slices : 
+    | LBRACK RBRACK IDENT  { }
+;
+
+(* arrays *)
+arrays : 
+    | LBRACK LIT_INT RBRACK IDENT { }
+;
+
+(* structs *)
+structs : 
+    | STRUCT LCURLY struct_body RCURLY { }
+;
+
+struct_body : 
+    |  { } (*Nothing is valid *)
 
 (* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
 function_dec :
