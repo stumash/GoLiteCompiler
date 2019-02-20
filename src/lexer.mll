@@ -160,7 +160,7 @@ rule scanner = parse
                           }
   | eof                   { slt_returns_eof := true;
                             if !last_token != SEMICOLON then
-                              ( mpt "%s\n" ";"; last_token := SEMICOLON; tok SEMICOLON )
+                              ( mpt "%s\n" ";"; last_token := SEMICOLON; SEMICOLON )
                             else
                               ( mpt "%s\n" "EOF"; EOF )
                           }
