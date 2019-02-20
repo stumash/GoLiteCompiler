@@ -175,13 +175,14 @@ type_dec :
  * Structs *)
 
 (*version to encompass all above mentioned stuff of tyeps *)
+(* We will need to take care of IDENT here as it can only be a struct, or a basic datatype or a typed type (wew the paradox! ) *)
 versions: 
     | IDENT (* struct types , basic types *)
     | LBRACK RBRACK IDENT  (* slice types *)
     | LBRACK LIT_INT RBRACK IDENT  (* array types *) { }
 ;
 
-(* structs *)
+(* struct definiton  *)
 structs : 
     | TYPE STRUCT LCURLY struct_body RCURLY { }
 ;
@@ -192,7 +193,7 @@ struct_body:
 ;
 
 body_2: 
-    | version struct_body  { }
+    | versions struct_body  { }
     | COMMA IDENT body_2 { }
 ;
 
@@ -204,19 +205,16 @@ function_dec :
 (*Frame is the set of parameters of the function *)
 frame : 
     | { (* No parameters *)} 
-    | c { }
+    | IDENT c { }
 ;
+
 
 (* c is defined to take into account the two different styles to specify parameters *)
 c : 
-    | IDENT d  { } 
+    | version frame   { }
+    | COMMA IDENT c  { }
 ;
 
-(* The second style  (Added extra to avoid shift reduce conflict by specifying it in rule c) *)
-d : 
-    | TYPE COMMA c{ }
-    | COMMA c {(* Which tells there are more parameters to go *)}
-;
 
 (* Added this but subject to change after discussion as return type can be NULL *)
 ret :
