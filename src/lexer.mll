@@ -11,9 +11,14 @@
         Printf.printf s_format x
 
     let last_token = ref EOF
+    let slt_returns_eof = ref false
 
-    (* slt - Set Last Token (and return it) *)
+    (* slt - Set Last Token *)
     let slt tok =
+        last_token := tok;
+        if !slt_returns_eof then EOF else tok
+
+    let slt2 tok = (* no check for slt_returns_eof *)
         last_token := tok;
         tok
 
@@ -157,10 +162,11 @@ rule scanner = parse
                               ( mpt "%s\n" ";" ; slt SEMICOLON )
                             else scanner lexbuf
                           }
-  | eof                   { if !last_token != SEMICOLON then
-                              ( mpt "%s\n" ";"; slt SEMICOLON )
+  | eof                   { slt_returns_eof := true;
+                            if !last_token != SEMICOLON then
+                              ( mpt "%s\n" ";"; slt2 SEMICOLON )
                             else
-                              ( mpt "%s\n" "EOF"; slt EOF )
+                              ( mpt "%s\n" "EOF"; EOF )
                           }
   | _                     { print_endline "\nERROR"; exit 1 }
 
