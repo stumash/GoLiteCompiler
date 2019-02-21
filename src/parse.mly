@@ -134,12 +134,7 @@
 
 (*The entire program is a collection of declarations statements and packages *)
 program :
-    | package declarations statements op { print_endline "top level" }
-;
-
-op : 
-    | SEMICOLON {} 
-    |   {} 
+    | package declarations EOF { print_endline "top level" }
 ;
 
 package :
@@ -154,10 +149,15 @@ declarations :
 ;
 
 declaration :
-    | variable_dec {  }
-    | type_dec {  }
+    | block_declaration { }
     | function_dec {  }
 ;
+
+block_declaration :
+    | variable_dec {  }
+    | type_dec {  }
+;
+
 
 variable_dec :
     | VAR IDENT versions {  }
@@ -165,6 +165,7 @@ variable_dec :
 
 type_dec :
     | TYPE IDENT versions {  }
+    | structs {}
 ;
 
 (*Other types include 
@@ -180,6 +181,7 @@ versions:
     | LBRACK RBRACK IDENT  (* slice types *)
     | LBRACK LIT_INT RBRACK IDENT  (* array types *) { }
 ;
+
 
 (* struct definiton  *)
 structs : 
@@ -252,21 +254,28 @@ statements :
 
 
 (*Left to add in statment (please chekc if i missed something): 
-    * ASSIGNMENT (almost done check things I've missed)
     * IF 
     * SWITCH 
     * INCREAMENT / DECREEAMNET
     * SHORTHAND DECLARATIONS (havent seen so far )
     *)
 statement :
-    | style ASG exp {  } (*Assignment operation *)
     | for_loop { } 
     | print_statement { } 
     | RETURN exp  { }
     | BREAK { }
     | CONTINUE  { }
-    | exp { } (* Quite weirdly expression statements are valid *)
+    | exp { } 
+    | block_declaration { }
+    | exp_list op exp_list { }
 ;
+
+(* TO COMPLETE *)
+op : 
+    | ASG 
+    | IASG { }
+;
+
 
 style : 
     | IDENT LBRACK operand RBRACK { } (* array/ slice access stuff *)
@@ -305,7 +314,7 @@ exp_2 :
 exp_3 :
     | exp_3 PLUS exp_4
     | exp_3 MINUS exp_4
-    | exp_3 OR exp_4
+    | exp_3 BOR exp_4
     | exp_3 XOR exp_4 {print_string "3"}
 ;
 
@@ -315,7 +324,7 @@ exp_4 :
     | exp_4 MOD exp_5
     | exp_4 LSHFT exp_5
     | exp_4 RSHFT exp_5
-    | exp_4 AND exp_5
+    | exp_4 BAND exp_5
     | exp_4 NAND exp_5 {print_string "4"}
 ;
 
