@@ -135,32 +135,49 @@
 (*The entire program is a collection of declarations statements and packages *)
 program :
     | package declarations statements op { print_endline "top level" }
-;
+    ;
 
-op : 
-    | SEMICOLON {} 
-    |   {} 
-;
+op :
+    | SEMICOLON {}
+    |   {}
+    ;
 
 package :
     | PACKAGE IDENT { print_string "Package" }
-;
+    ;
 
 (* declarations *)
 
 declarations :
     | declarations declaration {  }
     | { print_string "empty declarations" }
-;
+    ;
 
 declaration :
     | variable_dec {  }
     | type_dec {  }
     | function_dec {  }
-;
+    ;
 
 variable_dec :
-    | VAR IDENT versions {  }
+    | VAR declarees SEMICOLON {  }
+    | VAR declarees ASG expressions SEMICOLON {  }
+    | VAR LPAREN _variable_decs RPAREN {  }
+    ;
+_variable_decs :
+    | _variable_decs declarees ASG expressions SEMICOLON {  }
+    | {  }
+    ;
+declarees : (* comma-separated (varname[, type])*)
+    | {  }
+    ;
+expressions : (* comma-separated expressions *)
+    | expression {  }
+    | {  }
+;
+
+expression :
+    | CONTINUE {  } (* TODO *)
 ;
 
 type_dec :
@@ -197,7 +214,7 @@ body_2:
 (* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
 function_dec :
     | FUNC IDENT LPAREN frame RPAREN ret LCURLY statements RCURLY {  }
-;
+    ;
 
 (*Frame is the set of parameters of the function *)
 frame : 
@@ -212,18 +229,17 @@ c :
     | COMMA IDENT c  { }
 ;
 
-
 (* Added this but subject to change after discussion as return type can be NULL *)
 ret :
     | {(* No return type *)}
     | TYPE { print_string "some type "}
-;
+    ;
 
 (*Print and print_ln staterments *)
 print_statement :
     | PRINT LPAREN exp_list RPAREN
     | PRINTLN LPAREN exp_list RPAREN { print_string "Printing something " }
-;
+    ;
 
 (*list of expressions *)
 exp_list :
@@ -234,24 +250,24 @@ exp_list :
 (*For statements *)
 for_loop :
     | FOR loop_type { print_string "For" }
-;
+    ;
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
     | LCURLY statements RCURLY {print_string "Infinite loop"}
     | exp LCURLY statements RCURLY {print_string "While loop "}
     | statement SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_string "Normal Loop"}
-;
+    ;
 
 (* statements *)
 statements :
     | statements statement {  }
     | LCURLY statements RCURLY { } (*block level statements *)
     | { print_string "empty statements" }
-;
+    ;
 
 
-(*Left to add in statment (please chekc if i missed something): 
+(*Left to add in statment (please check if i missed something): 
     * ASSIGNMENT 
     * IF 
     * SWITCH 
@@ -277,17 +293,17 @@ statement :
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
     | exp_0 SEMICOLON {print_string "exp "}
-;
+    ;
 
 exp_0 :
     | exp_0 OR exp_1
     | exp_1 { print_string "0" }
-;
+    ;
 
 exp_1 :
     | exp_1 AND exp_2
     | exp_2 {print_string "1"}
-;
+    ;
 
 exp_2 :
     | exp_2 EQ exp_3
@@ -296,14 +312,14 @@ exp_2 :
     | exp_2 GTEQ exp_3
     | exp_2 LT exp_3
     | exp_2 LTEQ exp_3 {print_string "2"}
-;
+    ;
 
 exp_3 :
     | exp_3 PLUS exp_4
     | exp_3 MINUS exp_4
     | exp_3 OR exp_4
     | exp_3 XOR exp_4 {print_string "3"}
-;
+    ;
 
 exp_4 :
     | exp_4 MULT exp_5
@@ -313,7 +329,7 @@ exp_4 :
     | exp_4 RSHFT exp_5
     | exp_4 AND exp_5
     | exp_4 NAND exp_5 {print_string "4"}
-;
+    ;
 
 exp_5 :
 (*Unary based oeprations since the priority is the highest*)
@@ -322,7 +338,7 @@ exp_5 :
     | NOT exp_0
     | XOR exp_0 {print_string "5"}
     | operand {print_string "operand"}
-;
+    ;
 
 operand :
     | IDENT {print_string "identifier"}
@@ -331,6 +347,6 @@ operand :
     | LIT_FLOAT
     | LIT_RUNE
     | LIT_STRING {print_string "Literal"}
-;
+    ;
 
 (*Will define grammar for function calls as well as other accesses like array, slice struct elements access *)
