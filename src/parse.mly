@@ -329,11 +329,21 @@ exp_5 :
 ;
 
 exp_6 :
-    | IDENT LCURLY  { } (*function calls *)
+    | IDENT LCURLY param RCURLY { } (*function calls *)
     | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
     | LEN LCURLY exp RCURLY { }
     | CAP LCURLY exp RCURLY { }
     | exp_7 {}
+;
+
+param: 
+    | { }
+    | exp d { }
+;
+
+d :  
+    | { }
+    | COMMA exp d { }
 ;
 
 exp_7 :
