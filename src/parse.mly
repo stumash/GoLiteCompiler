@@ -213,7 +213,7 @@ c :
 ;
 
 
-(* Added this but subject to change after discussion as return type can be NULL *)
+(* Function return type *)
 ret :
     | {(* No return type *)}
     | TYPE { print_string "some type "}
@@ -221,7 +221,7 @@ ret :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN exp_list RPAREN
+    | PRINT LPAREN exp_list RPAREN 
     | PRINTLN LPAREN exp_list RPAREN { print_string "Printing something " }
 ;
 
@@ -245,32 +245,36 @@ loop_type :
 
 (* statements *)
 statements :
-    | statements statement {  }
+    | statements statement SEMICOLON{  }
     | LCURLY statements RCURLY { } (*block level statements *)
-    | { print_string "empty statements" }
+    |       { print_string "empty statements" }
 ;
 
 
 (*Left to add in statment (please chekc if i missed something): 
-    * ASSIGNMENT 
+    * ASSIGNMENT (almost done check things I've missed)
     * IF 
     * SWITCH 
     * INCREAMENT / DECREEAMNET
     * SHORTHAND DECLARATIONS (havent seen so far )
-    * ARRAY, SLICE, STRUCT element accesses
-    * append function
     *)
 statement :
-    | IDENT ASG exp {  }
-    | declarations { }
+    | style ASG exp {  } (*Assignment operation *)
     | for_loop { } 
-    | print_statement { }
-    | RETURN exp SEMICOLON { }
-    | BREAK SEMICOLON { }
-    | CONTINUE SEMICOLON { }
+    | print_statement { } 
+    | RETURN exp  { }
+    | BREAK { }
+    | CONTINUE  { }
     | exp { } (* Quite weirdly expression statements are valid *)
-
 ;
+
+style : 
+    | IDENT LBRACK operand RBRACK { } (* array/ slice access stuff *)
+    | IDENT DOT style  { } (* struct element access *)
+    | IDENT { } (* normal *)
+;
+
+(* We need anohter grammar to diffrentiate between different types of operands (eg: array, slice , struct etc) *)
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
 (*Need to add function calls which will be defined after this *)
@@ -317,15 +321,28 @@ exp_4 :
 
 exp_5 :
 (*Unary based oeprations since the priority is the highest*)
-    | PLUS exp_0
-    | MINUS exp_0
-    | NOT exp_0
-    | XOR exp_0 {print_string "5"}
-    | operand {print_string "operand"}
+    | PLUS exp_6
+    | MINUS exp_6
+    | NOT exp_6
+    | XOR exp_6 {print_string "5"}
+    | exp_6 {print_string "operand"}
+;
+
+exp_6 :
+    | IDENT LCURLY  { } (*function calls *)
+    | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
+    | LEN LCURLY exp RCURLY { }
+    | CAP LCURLY exp RCURLY { }
+    | exp_7 {}
+;
+
+exp_7 :
+    | LCURLY exp RCURLY { }
+    | operand { }
 ;
 
 operand :
-    | IDENT {print_string "identifier"}
+    | style {print_string "identifier"}
     | LIT_INT
     | LIT_BOOL
     | LIT_FLOAT
