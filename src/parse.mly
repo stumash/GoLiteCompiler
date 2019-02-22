@@ -1,17 +1,3 @@
-/**************************************************************************/
-/*                                                                        */
-/*  Menhir                                                                */
-/*                                                                        */
-/*  François Pottier, INRIA Rocquencourt                                  */
-/*  Yann Régis-Gianas, PPS, Université Paris Diderot                      */
-/*                                                                        */
-/*  Copyright 2005-2008 Institut National de Recherche en Informatique    */
-/*  et en Automatique. All rights reserved. This file is distributed      */
-/*  under the terms of the Q Public License version 1.0, with the change  */
-/*  described in file LICENSE.                                            */
-/*                                                                        */
-/**************************************************************************/
-
 (* Keywords *)
 %token BREAK
 %token CASE
@@ -113,26 +99,13 @@
 %left PLUS MINUS LOR XOR
 %left MULT DIV MOD LSHFT RSHFT LAND NAND
 
-
-/* changed the type, because the script does not return one value, but all
- * results which are calculated in the file */
-
-(* %start <int list> main *) (*Notice the int list type for the program this would be essential when we start building AST *)
-
-(*have set it as unit for now  need to change if required*)
+(* change <unit> to <anytype> as needed *)
 %start <unit> program
 
-(*
-- In the formal grammar, semicolons are terminators, as in C.
-- A semicolon is automatically inserted by the lexer if a line's last token is an identifier, a basic literal, or one of the following tokens: break continue fallthrough return ++ -- ) }
-- A semicolon may be omitted before a closing ) or } .
-*)
-
-
 %%
-/* the calculated results are accumalted in an OCaml int list */
 
-(*The entire program is a collection of declarations statements and packages *)
+(* GRAMMAR  *)
+
 program :
     | package declarations EOF { print_endline "top level" }
     ;
@@ -141,11 +114,9 @@ package :
     | PACKAGE IDENT { print_string "Package" }
     ;
 
-(* declarations *)
-
 declarations :
     | declarations declaration {  }
-    | { print_string "empty declarations" }
+    | (* empty *) { print_string "empty declarations" }
     ;
 
 declaration :
@@ -153,10 +124,15 @@ declaration :
     | function_dec {  }
     ;
 
+(* block declarations are allowed within any block, unlike function declarations *)
 block_declaration :
     | variable_dec {  }
     | type_dec {  }
-    | function_dec {  }
+    ;
+
+block_declarations :
+    | block_declarations block_declaration {  }
+    | (* empty *) {  }
     ;
 
 variable_dec :
@@ -165,32 +141,32 @@ variable_dec :
 
 type_dec :
     | TYPE IDENT versions {  }
-    | structs {}
+    | struct_def {}
     ;
 
-(*Other types include 
+(*Other types include
  * Basic
  * SLices
- * Arrays 
+ * Arrays
  * Structs *)
 
 (*version to encompass all above mentioned stuff of tyeps *)
 (* We will need to take care of IDENT here as it can only be a struct, or a basic datatype or a typed type (wew the paradox! ) *)
-versions: 
+versions:
     | IDENT (* struct types , basic types *)
     | LBRACK RBRACK IDENT  (* slice types *)
     | LBRACK LIT_INT RBRACK IDENT  (* array types *) { }
     ;
 
 (* struct definiton  *)
-structs : 
+struct_def :
     | TYPE STRUCT LCURLY struct_body RCURLY { }
     ;
-struct_body: 
+struct_body:
     | { }
     | IDENT body_2 { }
     ;
-body_2: 
+body_2:
     | versions struct_body  { }
     | COMMA IDENT body_2 { }
     ;
@@ -201,14 +177,14 @@ function_dec :
     ;
 
 (*Frame is the set of parameters of the function *)
-frame : 
-    | { (* No more parameters *)} 
+frame :
+    | { (* No more parameters *)}
     | IDENT c { }
     ;
 
 
 (* c is defined to take into account the two different styles to specify parameters *)
-c : 
+c :
     | versions frame   { }
     | COMMA IDENT c  { }
     ;
@@ -221,7 +197,7 @@ ret :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN exp_list RPAREN 
+    | PRINT LPAREN exp_list RPAREN
     | PRINTLN LPAREN exp_list RPAREN { print_string "Printing something " }
     ;
 
@@ -251,21 +227,21 @@ statements :
     ;
 
 
-(*Left to add in statment (please chekc if i missed something): 
-    * IF 
-    * SWITCH 
+(*Left to add in statment (please chekc if i missed something):
+    * IF
+    * SWITCH
     * INCREAMENT / DECREEAMNET
     * SHORTHAND DECLARATIONS (havent seen so far )
     *)
 statement :
-    | for_loop { } 
-    | print_statement { } 
+    | for_loop { }
+    | print_statement { }
     | RETURN exp  { }
     | BREAK { }
     | CONTINUE  { }
-    | exp { } 
+    | exp { }
     | block_declaration { }
-    | exp_list op exp_list { }
+    | exp_list ASG exp_list { }
     ;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
@@ -328,12 +304,12 @@ exp_6 :
     | exp_7 {}
     ;
 
-param: 
+param:
     | { }
     | exp d { }
     ;
 
-d :  
+d :
     | { }
     | COMMA exp d { }
     ;
@@ -344,12 +320,9 @@ exp_7 :
     ;
 
 operand :
-    | style {print_string "identifier"}
     | LIT_INT
     | LIT_BOOL
     | LIT_FLOAT
     | LIT_RUNE
     | LIT_STRING {print_string "Literal"}
     ;
-
-(*Will define grammar for function calls as well as other accesses like array, slice struct elements access *)
