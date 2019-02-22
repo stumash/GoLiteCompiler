@@ -1,3 +1,5 @@
+(* TOKENS *)
+
 (* Keywords *)
 %token BREAK
 %token CASE
@@ -102,8 +104,8 @@
 (* change <unit> to <anytype> as needed *)
 %start <unit> program
 
-%%
 
+%%
 (* GRAMMAR  *)
 
 program :
@@ -141,16 +143,10 @@ variable_dec :
 
 type_dec :
     | TYPE IDENT versions {  }
-    | struct_def {}
+    | struct_def {  }
     ;
 
-(*Other types include
- * Basic
- * SLices
- * Arrays
- * Structs *)
-
-(*version to encompass all above mentioned stuff of tyeps *)
+(* version to encompass all above mentioned stuff of types *)
 (* We will need to take care of IDENT here as it can only be a struct, or a basic datatype or a typed type (wew the paradox! ) *)
 versions:
     | IDENT (* struct types , basic types *)
@@ -164,11 +160,11 @@ struct_def :
     ;
 struct_body:
     | { }
-    | IDENT body_2 { }
+    | IDENT struct_body_2 { }
     ;
-body_2:
+struct_body_2:
     | versions struct_body  { }
-    | COMMA IDENT body_2 { }
+    | COMMA IDENT struct_body_2 { }
     ;
 
 (* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
