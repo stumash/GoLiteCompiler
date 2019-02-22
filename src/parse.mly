@@ -134,12 +134,7 @@
 
 (*The entire program is a collection of declarations statements and packages *)
 program :
-    | package declarations statements op { print_endline "top level" }
-    ;
-
-op :
-    | SEMICOLON {}
-    |   {}
+    | package declarations EOF { print_endline "top level" }
     ;
 
 package :
@@ -154,35 +149,24 @@ declarations :
     ;
 
 declaration :
+    | block_declaration { }
+    | function_dec {  }
+    ;
+
+block_declaration :
     | variable_dec {  }
     | type_dec {  }
     | function_dec {  }
     ;
 
 variable_dec :
-    | VAR declarees SEMICOLON {  }
-    | VAR declarees ASG expressions SEMICOLON {  }
-    | VAR LPAREN _variable_decs RPAREN {  }
+    | VAR IDENT versions {  }
     ;
-_variable_decs :
-    | _variable_decs declarees ASG expressions SEMICOLON {  }
-    | {  }
-    ;
-declarees : (* comma-separated (varname[, type])*)
-    | {  }
-    ;
-expressions : (* comma-separated expressions *)
-    | expression {  }
-    | {  }
-;
-
-expression :
-    | CONTINUE {  } (* TODO *)
-;
 
 type_dec :
     | TYPE IDENT versions {  }
-;
+    | structs {}
+    ;
 
 (*Other types include 
  * Basic
@@ -196,20 +180,20 @@ versions:
     | IDENT (* struct types , basic types *)
     | LBRACK RBRACK IDENT  (* slice types *)
     | LBRACK LIT_INT RBRACK IDENT  (* array types *) { }
-;
+    ;
 
 (* struct definiton  *)
 structs : 
     | TYPE STRUCT LCURLY struct_body RCURLY { }
-;
+    ;
 struct_body: 
     | { }
     | IDENT body_2 { }
-;
+    ;
 body_2: 
     | versions struct_body  { }
     | COMMA IDENT body_2 { }
-;
+    ;
 
 (* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
 function_dec :
@@ -220,16 +204,16 @@ function_dec :
 frame : 
     | { (* No more parameters *)} 
     | IDENT c { }
-;
+    ;
 
 
 (* c is defined to take into account the two different styles to specify parameters *)
 c : 
     | versions frame   { }
     | COMMA IDENT c  { }
-;
+    ;
 
-(* Added this but subject to change after discussion as return type can be NULL *)
+(* Function return type *)
 ret :
     | {(* No return type *)}
     | TYPE { print_string "some type "}
@@ -237,7 +221,7 @@ ret :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN exp_list RPAREN
+    | PRINT LPAREN exp_list RPAREN 
     | PRINTLN LPAREN exp_list RPAREN { print_string "Printing something " }
     ;
 
@@ -261,32 +245,28 @@ loop_type :
 
 (* statements *)
 statements :
-    | statements statement {  }
+    | statements statement SEMICOLON{  }
     | LCURLY statements RCURLY { } (*block level statements *)
     | { print_string "empty statements" }
     ;
 
 
-(*Left to add in statment (please check if i missed something): 
-    * ASSIGNMENT 
+(*Left to add in statment (please chekc if i missed something): 
     * IF 
     * SWITCH 
     * INCREAMENT / DECREEAMNET
     * SHORTHAND DECLARATIONS (havent seen so far )
-    * ARRAY, SLICE, STRUCT element accesses
-    * append function
     *)
 statement :
-    | IDENT ASG exp {  }
-    | declarations { }
     | for_loop { } 
-    | print_statement { }
-    | RETURN exp SEMICOLON { }
-    | BREAK SEMICOLON { }
-    | CONTINUE SEMICOLON { }
-    | exp { } (* Quite weirdly expression statements are valid *)
-
-;
+    | print_statement { } 
+    | RETURN exp  { }
+    | BREAK { }
+    | CONTINUE  { }
+    | exp { } 
+    | block_declaration { }
+    | exp_list op exp_list { }
+    ;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
 (*Need to add function calls which will be defined after this *)
@@ -317,7 +297,7 @@ exp_2 :
 exp_3 :
     | exp_3 PLUS exp_4
     | exp_3 MINUS exp_4
-    | exp_3 OR exp_4
+    | exp_3 BOR exp_4
     | exp_3 XOR exp_4 {print_string "3"}
     ;
 
@@ -327,21 +307,44 @@ exp_4 :
     | exp_4 MOD exp_5
     | exp_4 LSHFT exp_5
     | exp_4 RSHFT exp_5
-    | exp_4 AND exp_5
+    | exp_4 BAND exp_5
     | exp_4 NAND exp_5 {print_string "4"}
     ;
 
 exp_5 :
 (*Unary based oeprations since the priority is the highest*)
-    | PLUS exp_0
-    | MINUS exp_0
-    | NOT exp_0
-    | XOR exp_0 {print_string "5"}
-    | operand {print_string "operand"}
+    | PLUS exp_6
+    | MINUS exp_6
+    | NOT exp_6
+    | XOR exp_6 {print_string "5"}
+    | exp_6 {print_string "operand"}
+    ;
+
+exp_6 :
+    | IDENT LCURLY param RCURLY { } (*function calls *)
+    | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
+    | LEN LCURLY exp RCURLY { }
+    | CAP LCURLY exp RCURLY { }
+    | exp_7 {}
+    ;
+
+param: 
+    | { }
+    | exp d { }
+    ;
+
+d :  
+    | { }
+    | COMMA exp d { }
+    ;
+
+exp_7 :
+    | LCURLY exp RCURLY { }
+    | operand { }
     ;
 
 operand :
-    | IDENT {print_string "identifier"}
+    | style {print_string "identifier"}
     | LIT_INT
     | LIT_BOOL
     | LIT_FLOAT
