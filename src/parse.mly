@@ -98,8 +98,8 @@
 %left OR
 %left AND
 %left EQ NEQ GT GTEQ LT LTEQ
-%left PLUS MINUS LOR XOR
-%left MULT DIV MOD LSHFT RSHFT LAND NAND
+%left PLUS MINUS BOR XOR
+%left MULT DIV MOD LSHFT RSHFT BAND NAND
 
 (* change <unit> to <anytype> as needed *)
 %start <unit> program
@@ -132,10 +132,6 @@ block_declaration :
     | type_dec {  }
     ;
 
-block_declarations :
-    | block_declarations block_declaration {  }
-    | (* empty *) {  }
-    ;
 
 variable_dec :
     | VAR IDENT versions {  }
@@ -223,6 +219,29 @@ statements :
     ;
 
 
+ident_type : 
+    | BLANKID { } (*Blank Identifier *)
+    | IDENT { } (* Normal as is *)
+    | IDENT LBRACK ident_type RBRACK { } (* array and slice element access *)
+    | IDENT DOT ident_type { } (* Struct element access *)
+;
+
+ass_type :
+    | ASG { } (*normal assignment *)
+    | PLUSEQ 
+    | MINUSEQ
+    | MULTEQ
+    | DIVEQ
+    | MODEQ { } (*Arithmetic shorthand *)
+    | BANDEQ
+    | BOREQ
+    | XOREQ
+    | LSHFTEQ
+    | RSHFTEQ
+    | NANDEQ { } (*Bitwise shorthand *)
+;
+
+
 (*Left to add in statment (please chekc if i missed something):
     * IF
     * SWITCH
@@ -237,7 +256,9 @@ statement :
     | CONTINUE  { }
     | exp { }
     | block_declaration { }
-    | exp_list ASG exp_list { }
+    | exp_list ass_type exp_list { }
+    | ident_type INC 
+    | ident_type DEC { } (* Shorthand inc dec *)
     ;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
@@ -316,6 +337,7 @@ exp_7 :
     ;
 
 operand :
+    | ident_type {print_string "Identifier_variable"}
     | LIT_INT
     | LIT_BOOL
     | LIT_FLOAT
