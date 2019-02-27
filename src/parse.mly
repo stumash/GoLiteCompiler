@@ -113,7 +113,7 @@ program :
     ;
 
 package :
-    | PACKAGE IDENT { print_endline "Package" }
+    | PACKAGE package_name=IDENT { Printf.printf "package %s\n" package_name }
     ;
 
 declarations :
@@ -123,23 +123,57 @@ declarations :
 
 declaration :
     | block_declaration { }
-    | function_dec {  }
+    | function_declaration {  } (* function declarations cannot be in blocks *)
     ;
 
-(* block declarations are allowed within any block, unlike function declarations *)
 block_declaration :
-    | variable_dec {  }
-    | type_dec {  }
+    | variable_declaration {  }
+    | type_declaration {  }
     ;
 
-
-variable_dec :
-    | VAR IDENT versions {  }
+variable_declaration :
+    | VAR variable_declaration_ {  }
+    ;
+variable_declaration_ :
+    | var_spec {  }
+    | LPAREN separated_list(SEMICOLON, var_spec) RPAREN {  }
+    ;
+var_spec :
+    | identifier_list type_spec option(var_spec_rhs) {  } 
+    | identifier_list option(var_spec_rhs) {  }
+    ;
+var_spec_rhs :
+    | ASG expression_list {  }
+    ;
+identifier_list :
+    | separated_nonempty_list(COMMA, IDENT) {  }
     ;
 
-type_dec :
-    | TYPE IDENT versions {  }
-    | struct_def {  }
+type_spec :
+    | IDENT {  }
+    | type_literal {  }
+    ;
+type_literal :
+    | array_type_lit {  }
+    | struct_type_lit {  }
+    | slice_type_lit {  }
+    ;
+array_type_lit :
+    | LBRACK exp RBRACK type_spec {  }
+    ;
+struct_type_lit :
+    (* embedded types not supported? *)
+    | STRUCT LCURLY separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY {  }
+    ;
+struct_field_decl :
+    | identifier_list type_spec {  }
+    ;
+slice_type_lit :
+    | LBRACK RBRACK type_spec {  }
+    ;
+
+type_declaration :
+    | TYPE IDENT type_spec {  }
     ;
 
 (* version to encompass all above mentioned stuff of types *)
@@ -150,21 +184,8 @@ versions:
     | LBRACK LIT_INT RBRACK IDENT  (* array types *) { }
     ;
 
-(* struct definiton  *)
-struct_def :
-    | TYPE STRUCT LCURLY struct_body RCURLY { }
-    ;
-struct_body:
-    | { }
-    | IDENT struct_body_2 { }
-    ;
-struct_body_2:
-    | versions struct_body  { }
-    | COMMA IDENT struct_body_2 { }
-    ;
-
 (* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
-function_dec :
+function_declaration :
     | FUNC IDENT LPAREN frame RPAREN ret LCURLY statements RCURLY {  }
     ;
 
@@ -214,31 +235,31 @@ loop_type :
 (* statements *)
 statements :
     | statements statement SEMICOLON{  }
-    | LCURLY statements RCURLY { } (*block level statements *)
+    | LCURLY statements RCURLY { }
     | { print_endline "empty statements" }
     ;
 
 
-ident_type : 
+ident_type :
     | BLANKID { } (*Blank Identifier *)
     | IDENT { } (* Normal as is *)
     | IDENT LBRACK ident_type RBRACK { } (* array and slice element access *)
     | IDENT DOT ident_type { } (* Struct element access *)
 ;
 
-ass_type :
-    | ASG { } (*normal assignment *)
-    | PLUSEQ 
+asg_tok :
+    | ASG
+    | PLUSEQ
     | MINUSEQ
     | MULTEQ
     | DIVEQ
-    | MODEQ { } (*Arithmetic shorthand *)
+    | MODEQ
     | BANDEQ
     | BOREQ
     | XOREQ
     | LSHFTEQ
     | RSHFTEQ
-    | NANDEQ { } (*Bitwise shorthand *)
+    | NANDEQ {}
 ;
 
 
@@ -256,9 +277,13 @@ statement :
     | CONTINUE  { }
     | exp { }
     | block_declaration { }
-    | exp_list ass_type exp_list { }
-    | ident_type INC 
+    | exp_list asg_tok exp_list { }
+    | ident_type INC
     | ident_type DEC { } (* Shorthand inc dec *)
+    ;
+
+expression_list :
+    | separated_nonempty_list(COMMA, exp) {  }
     ;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
