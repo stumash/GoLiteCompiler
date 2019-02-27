@@ -113,12 +113,12 @@ program :
     ;
 
 package :
-    | PACKAGE IDENT { print_string "Package" }
+    | PACKAGE IDENT { print_endline "Package" }
     ;
 
 declarations :
     | declarations declaration {  }
-    | (* empty *) { print_string "empty declarations" }
+    | (* empty *) { print_endline "empty declarations" }
     ;
 
 declaration :
@@ -184,38 +184,38 @@ c :
 (* Function return type *)
 ret :
     | {(* No return type *)}
-    | TYPE { print_string "some type "}
+    | TYPE { print_endline "some type "}
     ;
 
 (*Print and print_ln staterments *)
 print_statement :
     | PRINT LPAREN exp_list RPAREN
-    | PRINTLN LPAREN exp_list RPAREN { print_string "Printing something " }
+    | PRINTLN LPAREN exp_list RPAREN { print_endline "Printing something " }
     ;
 
 (*list of expressions *)
 exp_list :
     | { (* Empty list *)}
     | exp
-    | exp_list COMMA exp { print_string "List of expressions" }
+    | exp_list COMMA exp { print_endline "List of expressions" }
 
 (*For statements *)
 for_loop :
-    | FOR loop_type { print_string "For" }
+    | FOR loop_type { print_endline "For" }
     ;
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
-    | LCURLY statements RCURLY {print_string "Infinite loop"}
-    | exp LCURLY statements RCURLY {print_string "While loop "}
-    | statement SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_string "Normal Loop"}
+    | LCURLY statements RCURLY {print_endline "Infinite loop"}
+    | exp LCURLY statements RCURLY {print_endline "While loop "}
+    | statement SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_endline "Normal Loop"}
     ;
 
 (* statements *)
 statements :
     | statements statement SEMICOLON{  }
     | LCURLY statements RCURLY { } (*block level statements *)
-    | { print_string "empty statements" }
+    | { print_endline "empty statements" }
     ;
 
 
@@ -265,17 +265,17 @@ statement :
 (*Need to add function calls which will be defined after this *)
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
-    | exp_0 SEMICOLON {print_string "exp "}
+    | exp_0 SEMICOLON {print_endline "exp "}
     ;
 
 exp_0 :
     | exp_0 OR exp_1
-    | exp_1 { print_string "0" }
+    | exp_1 { print_endline "0" }
     ;
 
 exp_1 :
     | exp_1 AND exp_2
-    | exp_2 {print_string "1"}
+    | exp_2 {print_endline "1"}
     ;
 
 exp_2 :
@@ -284,14 +284,14 @@ exp_2 :
     | exp_2 GT exp_3
     | exp_2 GTEQ exp_3
     | exp_2 LT exp_3
-    | exp_2 LTEQ exp_3 {print_string "2"}
+    | exp_2 LTEQ exp_3 {print_endline "2"}
     ;
 
 exp_3 :
     | exp_3 PLUS exp_4
     | exp_3 MINUS exp_4
     | exp_3 BOR exp_4
-    | exp_3 XOR exp_4 {print_string "3"}
+    | exp_3 XOR exp_4 {print_endline "3"}
     ;
 
 exp_4 :
@@ -301,7 +301,7 @@ exp_4 :
     | exp_4 LSHFT exp_5
     | exp_4 RSHFT exp_5
     | exp_4 BAND exp_5
-    | exp_4 NAND exp_5 {print_string "4"}
+    | exp_4 NAND exp_5 {print_endline "4"}
     ;
 
 exp_5 :
@@ -309,8 +309,8 @@ exp_5 :
     | PLUS exp_6
     | MINUS exp_6
     | NOT exp_6
-    | XOR exp_6 {print_string "5"}
-    | exp_6 {print_string "operand"}
+    | XOR exp_6 {print_endline "5"}
+    | exp_6 {print_endline "operand"}
     ;
 
 exp_6 :
@@ -337,10 +337,10 @@ exp_7 :
     ;
 
 operand :
-    | ident_type {print_string "Identifier_variable"}
+    | ident_type {print_endline "Identifier_variable"}
     | LIT_INT
     | LIT_BOOL
     | LIT_FLOAT
     | LIT_RUNE
-    | LIT_STRING {print_string "Literal"}
+    | LIT_STRING {print_endline "Literal"}
     ;

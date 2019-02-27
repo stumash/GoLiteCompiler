@@ -5,3 +5,4 @@ cd "${THIS_DIR}/src"
 
 ocamlbuild -use-menhir main_scan.native
 ocamlbuild -use-menhir main_tokens.native
+ocamlbuild -use-menhir main_parse.native

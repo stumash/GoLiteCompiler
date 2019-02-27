@@ -29,6 +29,8 @@
             | RPAREN | RBRACK | RCURLY | INC | DEC    -> true
             | BREAK | CONTINUE | FALLTHROUGH | RETURN -> true
             | _                                       -> false
+
+    exception Error
 }
 
 
@@ -164,7 +166,7 @@ rule scanner = parse
                             else
                               ( mpt "%s\n" "EOF"; EOF )
                           }
-  | _                     { print_endline "\nERROR"; exit 1 }
+  | _                     { raise Error }
 
 
 (*trailer
