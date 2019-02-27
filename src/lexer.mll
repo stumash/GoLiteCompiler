@@ -21,6 +21,7 @@
     (* https://golang.org/ref/spec#Semicolons (Rule 1 only) *)
     let is_stmt_end tok =
         match tok with
+            | IDENT s                                 -> true
             | LIT_INT i                               -> true
             | LIT_FLOAT f                             -> true
             | LIT_BOOL b                              -> true

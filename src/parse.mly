@@ -109,41 +109,40 @@
 (* GRAMMAR  *)
 
 program :
-    | package declarations EOF { print_endline "top level" }
+    | package declarations  { print_endline "top level" }
     ;
 
 package :
-    | PACKAGE package_name=IDENT { Printf.printf "package %s\n" package_name }
+    | PACKAGE package_name=IDENT option(SEMICOLON) { Printf.printf "package %s\n" package_name }
     ;
 
 declarations :
-    | declarations declaration {  }
-    | (* empty *) { print_endline "empty declarations" }
+    | separated_list(SEMICOLON, declaration) option(SEMICOLON) { print_endline "GG VAR" }
     ;
 
 declaration :
-    | block_declaration { }
+    | block_declaration {print_endline "GG VAR" }
     | function_declaration {  } (* function declarations cannot be in blocks *)
     ;
 
 block_declaration :
-    | variable_declaration {  }
+    | variable_declaration { print_endline "GG VAR" }
     | type_declaration {  }
     ;
 
 variable_declaration :
-    | VAR variable_declaration_ {  }
+    | VAR variable_declaration_ { print_endline "GG VAR" }
     ;
 variable_declaration_ :
-    | var_spec SEMICOLON {  }
-    | LPAREN separated_list(SEMICOLON, var_spec) option(SEMICOLON) RPAREN SEMICOLON {  }
+    | var_spec { print_endline "VAR" }
+    | LPAREN separated_list(SEMICOLON, var_spec) option(SEMICOLON) RPAREN {  }
     ;
 var_spec :
-    | identifier_list type_spec option(var_spec_rhs) {  } 
+    | identifier_list type_spec option(var_spec_rhs) { print_endline "GG VAR" } 
     | identifier_list option(var_spec_rhs) {  }
     ;
 var_spec_rhs :
-    | ASG expression_list {  }
+    | ASG expression_list { }
     ;
 
 identifier_list :
@@ -151,7 +150,7 @@ identifier_list :
     ;
 
 type_spec :
-    | IDENT {  }
+    | IDENT { print_endline "GG IDENT" }
     | type_literal {  }
     ;
 type_literal :
@@ -174,7 +173,7 @@ slice_type_lit :
     ;
 
 type_declaration :
-    | TYPE IDENT type_spec SEMICOLON {  }
+    | TYPE IDENT type_spec {  }
     ;
 
 (* version to encompass all above mentioned stuff of types *)
@@ -229,8 +228,7 @@ loop_type :
 
 (* statements *)
 statements :
-    | statements statement {  }
-    | (* empty *) {  }
+    | separated_list(SEMICOLON, statement) option(SEMICOLON) {  }
     ;
 
 
@@ -273,8 +271,7 @@ statement :
     ;
 
 simple_statement :
-    | SEMICOLON {  }
-    | exp SEMICOLON {  }
+    | exp {  }
     | inc_dec_statement {  }
     | assignment_statement {  }
     | short_val_declaration {  }
@@ -285,16 +282,16 @@ statement_block :
     ;
 
 assignment_statement :
-    | expression_list asg_tok expression_list SEMICOLON {  }
+    | expression_list asg_tok expression_list {  }
     ;
 
 short_val_declaration :
-    | identifier_list IASG expression_list SEMICOLON {  }
+    | identifier_list IASG expression_list{  }
     ;
 
 inc_dec_statement :
-    | exp INC SEMICOLON {  }
-    | exp DEC SEMICOLON {  }
+    | exp INC {  }
+    | exp DEC {  }
     ;
 
 if_statement :
@@ -327,7 +324,7 @@ expression_list :
 (*Need to add function calls which will be defined after this *)
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
-    | exp_0 SEMICOLON {print_endline "exp "}
+    | exp_0  {print_endline "exp "}
     ;
 
 exp_0 :
