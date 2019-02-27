@@ -135,8 +135,8 @@ variable_declaration :
     | VAR variable_declaration_ {  }
     ;
 variable_declaration_ :
-    | var_spec {  }
-    | LPAREN separated_list(SEMICOLON, var_spec) RPAREN {  }
+    | var_spec SEMICOLON {  }
+    | LPAREN separated_list(SEMICOLON, var_spec) option(SEMICOLON) RPAREN SEMICOLON {  }
     ;
 var_spec :
     | identifier_list type_spec option(var_spec_rhs) {  } 
@@ -145,6 +145,7 @@ var_spec :
 var_spec_rhs :
     | ASG expression_list {  }
     ;
+
 identifier_list :
     | separated_nonempty_list(COMMA, IDENT) {  }
     ;
@@ -173,7 +174,7 @@ slice_type_lit :
     ;
 
 type_declaration :
-    | TYPE IDENT type_spec {  }
+    | TYPE IDENT type_spec SEMICOLON {  }
     ;
 
 (* version to encompass all above mentioned stuff of types *)
@@ -210,15 +211,9 @@ ret :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN exp_list RPAREN
-    | PRINTLN LPAREN exp_list RPAREN { print_endline "Printing something " }
+    | PRINT LPAREN expression_list RPAREN
+    | PRINTLN LPAREN expression_list RPAREN { print_endline "Printing something " }
     ;
-
-(*list of expressions *)
-exp_list :
-    | { (* Empty list *)}
-    | exp
-    | exp_list COMMA exp { print_endline "List of expressions" }
 
 (*For statements *)
 for_loop :
@@ -234,9 +229,8 @@ loop_type :
 
 (* statements *)
 statements :
-    | statements statement SEMICOLON{  }
-    | LCURLY statements RCURLY { }
-    | { print_endline "empty statements" }
+    | statements statement {  }
+    | (* empty *) {  }
     ;
 
 
@@ -245,7 +239,7 @@ ident_type :
     | IDENT { } (* Normal as is *)
     | IDENT LBRACK ident_type RBRACK { } (* array and slice element access *)
     | IDENT DOT ident_type { } (* Struct element access *)
-;
+    ;
 
 asg_tok :
     | ASG
@@ -260,26 +254,69 @@ asg_tok :
     | LSHFTEQ
     | RSHFTEQ
     | NANDEQ {}
-;
+    ;
 
-
-(*Left to add in statment (please chekc if i missed something):
-    * IF
-    * SWITCH
-    * INCREAMENT / DECREEAMNET
-    * SHORTHAND DECLARATIONS (havent seen so far )
-    *)
 statement :
-    | for_loop { }
-    | print_statement { }
-    | RETURN exp  { }
-    | BREAK { }
-    | CONTINUE  { }
+    | statement_block {  }
     | exp { }
-    | block_declaration { }
-    | exp_list asg_tok exp_list { }
-    | ident_type INC
-    | ident_type DEC { } (* Shorthand inc dec *)
+    | assignment_statement {  }
+    | block_declaration {  }
+    | short_val_declaration {  }
+    | inc_dec_statement {  }
+    | print_statement {  }
+    | RETURN exp  {  }
+    | if_statement {  }
+    | switch_statement {  }
+    | for_loop {  }
+    | BREAK {  }
+    | CONTINUE {  }
+    ;
+
+simple_statement :
+    | SEMICOLON {  }
+    | exp SEMICOLON {  }
+    | inc_dec_statement {  }
+    | assignment_statement {  }
+    | short_val_declaration {  }
+    ;
+
+statement_block :
+    | LCURLY statements RCURLY {  }
+    ;
+
+assignment_statement :
+    | expression_list asg_tok expression_list SEMICOLON {  }
+    ;
+
+short_val_declaration :
+    | identifier_list IASG expression_list SEMICOLON {  }
+    ;
+
+inc_dec_statement :
+    | exp INC SEMICOLON {  }
+    | exp DEC SEMICOLON {  }
+    ;
+
+if_statement :
+    | IF option(simple_statement) statement_block ELSE endif {  }
+    ;
+endif :
+    | if_statement {  }
+    | statement_block {  }
+    ;
+
+switch_statement :
+    | SWITCH option(simple_statement) option(exp) LCURLY expr_case_clauses RCURLY {  }
+    ;
+expr_case_clauses :
+    | expr_case_clauses expr_case_clause {  }
+    ;
+expr_case_clause :
+    | expr_switch_case COLON statements {  }
+    ;
+expr_switch_case :
+    | DEFAULT {  }
+    | CASE expression_list {  }
     ;
 
 expression_list :
