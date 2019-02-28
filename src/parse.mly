@@ -1,3 +1,7 @@
+%{
+    open Tree
+%}
+
 (* TOKENS *)
 
 (* Keywords *)
@@ -102,6 +106,8 @@
 %left MULT DIV MOD LSHFT RSHFT BAND NAND
 %nonassoc unary
 
+
+
 (* change <unit> to <anytype> as needed *)
 %start <unit> program
 
@@ -123,7 +129,7 @@ declarations :
     ;
 
 declaration :
-    | block_declaration {print_endline "GG VAR" }
+    | d=block_declaration { [d] ; print_endline "GG VAR" }
     | function_declaration {  } (* function declarations cannot be in blocks *)
     ;
 
@@ -297,11 +303,12 @@ inc_dec_statement :
     ;
 
 if_statement :
-    | IF option(simple_statement) statement_block ELSE endif {  }
+    | IF option(simple_statement) exp statement_block endif {  }
     ;
 endif :
-    | if_statement {  }
-    | statement_block {  }
+    | ELSE if_statement {  }
+    | ELSE statement_block {  }
+    | { }
     ;
 
 switch_statement :
@@ -324,47 +331,45 @@ expression_list :
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
 (* binary operator expressions *)
-    | exp OR exp
-    | exp AND exp
-    | exp EQ exp
-    | exp NEQ exp
-    | exp GT exp
-    | exp GTEQ exp
-    | exp LT exp
-    | exp LTEQ exp
-    | exp PLUS exp
-    | exp MINUS exp
-    | exp BOR exp
-    | exp XOR exp
-    | exp MULT exp
-    | exp DIV exp
-    | exp MOD exp
-    | exp LSHFT exp
-    | exp RSHFT exp
-    | exp BAND exp
-    | exp NAND exp { }
+    | exp OR uexp
+    | exp AND uexp
+    | exp EQ uexp
+    | exp NEQ uexp
+    | exp GT uexp
+    | exp GTEQ uexp
+    | exp LT uexp
+    | exp LTEQ uexp
+    | exp PLUS uexp
+    | exp MINUS uexp
+    | exp BOR uexp
+    | exp XOR uexp
+    | exp MULT uexp
+    | exp DIV uexp
+    | exp MOD uexp
+    | exp LSHFT uexp
+    | exp RSHFT uexp
+    | exp BAND uexp
+    | exp NAND uexp { }
+;
 (* unary operator expressions NEED TO HANDLE THIS SOMEHOW LATER *)
  (*unaary can only be for one operand and that the expression cannot be *)
-    | PLUS operand %prec unary
-    | MINUS operand  %prec unary
-    | NOT operand %prec unary
-    | XOR operand  %prec unary 
+uexp : 
+    | PLUS exp_other 
+    | MINUS exp_other   
+    | NOT exp_other 
+    | XOR exp_other  { }
+    | exp_other { }
+; 
 (* 'keyword functions' *)
-    | IDENT LCURLY param RCURLY { } (*function calls *)
-    | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
-    | LEN LCURLY exp RCURLY { } (* array/slice length *)
-    | CAP LCURLY exp RCURLY { } (* array/slice capacity *)
+exp_other : 
+    | IDENT LPAREN expression_list RPAREN { } (*function calls *)
+    | APPEND LPAREN exp COMMA exp RPAREN { } (* Append *)
+    | LEN LPAREN exp RPAREN { } (* array/slice length *)
+    | CAP LPAREN exp RPAREN { } (* array/slice capacity *)
     | LPAREN exp RPAREN { } (* '(' exp ')' *)
 (* identifiers and rvalues *)
-
     | operand { }
     ;
-
-
-param:
-    | separated_nonempty_list(COMMA, exp) { } 
-    ;
-
 
 operand :
     | ident_type {print_endline "Identifier_variable"}
