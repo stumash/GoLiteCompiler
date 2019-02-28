@@ -139,7 +139,7 @@ variable_declaration_ :
     | LPAREN separated_list(SEMICOLON, var_spec) option(SEMICOLON) RPAREN {  }
     ;
 var_spec :
-    | identifier_list type_spec option(var_spec_rhs) { print_endline "GG VAR" } 
+    | identifier_list type_spec option(var_spec_rhs) { print_endline "GG VAR" }
     | identifier_list option(var_spec_rhs) {  }
     ;
 var_spec_rhs :
