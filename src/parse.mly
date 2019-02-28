@@ -110,7 +110,7 @@
 (* GRAMMAR  *)
 
 program :
-    | package declarations EOF  { print_endline "top level" }
+    | package declarations EOF { print_endline "top level" }
     ;
 
 package :
@@ -118,7 +118,7 @@ package :
     ;
 
 declarations :
-    | separated_list(SEMICOLON, declaration) option(SEMICOLON) { print_endline "GG VAR" }
+    | separated_list(SEMICOLON, declaration) option(SEMICOLON) { print_endline "declarations" }
     ;
 
 declaration :
