@@ -223,7 +223,7 @@ loop_type :
 
 (* statements *)
 statements :
-    | separated_list(SEMICOLON, statement) (*SEMI*) {  }
+    | statement SEMICOLON statements (*SEMI*) {  }
     | statement_block {  }
     ;
 
@@ -336,11 +336,13 @@ exp :
     | exp RSHFT exp
     | exp BAND exp
     | exp NAND exp
-(* unary operator expressions *)
+(* unary operator expressions NEED TO HANDLE THIS SOMEHOW LATER *)
+(* 
     | PLUS exp %prec unary
     | MINUS exp %prec unary
     | NOT exp %prec unary
-    | XOR exp 
+    | XOR exp %prec unary
+    *)
 (* 'keyword functions' *)
     | IDENT LCURLY param RCURLY { } (*function calls *)
     | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
