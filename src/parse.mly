@@ -114,11 +114,12 @@ program :
     ;
 
 package :
-    | PACKAGE package_name=IDENT option(SEMICOLON) { Printf.printf "package %s\n" package_name }
+    | PACKAGE package_name=IDENT SEMICOLON { Printf.printf "package %s\n"  }
     ;
 
 declarations :
-    | separated_list(SEMICOLON, declaration) option(SEMICOLON) { print_endline "declarations" }
+    | declarations declaration SEMICOLON  { print_endline "declarations" }
+    | { } 
     ;
 
 declaration :
@@ -136,7 +137,7 @@ variable_declaration :
     ;
 variable_declaration_ :
     | var_spec { print_endline "VAR" }
-    | LPAREN separated_list(SEMICOLON, var_spec) option(SEMICOLON) RPAREN {  }
+    | LPAREN separated_list(SEMICOLON, var_spec) (*SEMI*) RPAREN {  }
     ;
 var_spec :
     | identifier_list type_spec option(var_spec_rhs) { print_endline "GG VAR" }
@@ -177,13 +178,6 @@ type_declaration :
     | TYPE IDENT type_spec {  }
     ;
 
-(* version to encompass all above mentioned stuff of types *)
-(* We will need to take care of IDENT here as it can only be a struct, or a basic datatype or a typed type (wew the paradox! ) *)
-versions:
-    | IDENT (* struct types , basic types *)
-    | LBRACK RBRACK IDENT  (* slice types *)
-    | LBRACK LIT_INT RBRACK IDENT  (* array types *) { }
-    ;
 
 (* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
 function_declaration :
@@ -199,7 +193,7 @@ frame :
 
 (* c is defined to take into account the two different styles to specify parameters *)
 c :
-    | versions frame   { }
+    | type_spec frame   { }
     | COMMA IDENT c  { }
     ;
 
@@ -229,7 +223,8 @@ loop_type :
 
 (* statements *)
 statements :
-    | separated_list(SEMICOLON, statement) option(SEMICOLON) {  }
+    | separated_list(SEMICOLON, statement) (*SEMI*) {  }
+    | statement_block {  }
     ;
 
 
@@ -256,7 +251,6 @@ asg_tok :
     ;
 
 statement :
-    | statement_block {  }
     | exp { }
     | assignment_statement {  }
     | block_declaration {  }
@@ -346,7 +340,7 @@ exp :
     | PLUS exp %prec unary
     | MINUS exp %prec unary
     | NOT exp %prec unary
-    | XOR exp %prec unary
+    | XOR exp 
 (* 'keyword functions' *)
     | IDENT LCURLY param RCURLY { } (*function calls *)
     | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
@@ -358,14 +352,9 @@ exp :
     ;
 
 param:
-    | { }
-    | exp d { }
+    | separated_nonempty_list(COMMA, exp) { } 
     ;
 
-d :
-    | { }
-    | COMMA exp d { }
-    ;
 
 operand :
     | ident_type {print_endline "Identifier_variable"}
