@@ -100,7 +100,7 @@
 %left EQ NEQ GT GTEQ LT LTEQ
 %left PLUS MINUS BOR XOR
 %left MULT DIV MOD LSHFT RSHFT BAND NAND
-%right unary
+%nonassoc unary
 
 (* change <unit> to <anytype> as needed *)
 %start <unit> program
@@ -342,14 +342,13 @@ exp :
     | exp LSHFT exp
     | exp RSHFT exp
     | exp BAND exp
-    | exp NAND exp
+    | exp NAND exp { }
 (* unary operator expressions NEED TO HANDLE THIS SOMEHOW LATER *)
-(* 
-    | PLUS exp %prec unary
-    | MINUS exp %prec unary
-    | NOT exp %prec unary
-    | XOR exp %prec unary
-    *)
+ (*unaary can only be for one operand and that the expression cannot be *)
+    | PLUS operand %prec unary
+    | MINUS operand  %prec unary
+    | NOT operand %prec unary
+    | XOR operand  %prec unary 
 (* 'keyword functions' *)
     | IDENT LCURLY param RCURLY { } (*function calls *)
     | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
@@ -357,8 +356,10 @@ exp :
     | CAP LCURLY exp RCURLY { } (* array/slice capacity *)
     | LPAREN exp RPAREN { } (* '(' exp ')' *)
 (* identifiers and rvalues *)
+
     | operand { }
     ;
+
 
 param:
     | separated_nonempty_list(COMMA, exp) { } 
