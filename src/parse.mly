@@ -100,6 +100,7 @@
 %left EQ NEQ GT GTEQ LT LTEQ
 %left PLUS MINUS BOR XOR
 %left MULT DIV MOD LSHFT RSHFT BAND NAND
+%right unary
 
 (* change <unit> to <anytype> as needed *)
 %start <unit> program
@@ -109,7 +110,7 @@
 (* GRAMMAR  *)
 
 program :
-    | package declarations  { print_endline "top level" }
+    | package declarations EOF  { print_endline "top level" }
     ;
 
 package :
@@ -303,10 +304,7 @@ endif :
     ;
 
 switch_statement :
-    | SWITCH option(simple_statement) option(exp) LCURLY expr_case_clauses RCURLY {  }
-    ;
-expr_case_clauses :
-    | expr_case_clauses expr_case_clause {  }
+    | SWITCH option(simple_statement) option(exp) LCURLY nonempty_list(expr_case_clause) RCURLY {  }
     ;
 expr_case_clause :
     | expr_switch_case COLON statements {  }
@@ -324,60 +322,39 @@ expression_list :
 (*Need to add function calls which will be defined after this *)
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
-    | exp_0  {print_endline "exp "}
-    ;
-
-exp_0 :
-    | exp_0 OR exp_1
-    | exp_1 { print_endline "0" }
-    ;
-
-exp_1 :
-    | exp_1 AND exp_2
-    | exp_2 {print_endline "1"}
-    ;
-
-exp_2 :
-    | exp_2 EQ exp_3
-    | exp_2 NEQ exp_3
-    | exp_2 GT exp_3
-    | exp_2 GTEQ exp_3
-    | exp_2 LT exp_3
-    | exp_2 LTEQ exp_3 {print_endline "2"}
-    ;
-
-exp_3 :
-    | exp_3 PLUS exp_4
-    | exp_3 MINUS exp_4
-    | exp_3 BOR exp_4
-    | exp_3 XOR exp_4 {print_endline "3"}
-    ;
-
-exp_4 :
-    | exp_4 MULT exp_5
-    | exp_4 DIV exp_5
-    | exp_4 MOD exp_5
-    | exp_4 LSHFT exp_5
-    | exp_4 RSHFT exp_5
-    | exp_4 BAND exp_5
-    | exp_4 NAND exp_5 {print_endline "4"}
-    ;
-
-exp_5 :
-(*Unary based oeprations since the priority is the highest*)
-    | PLUS exp_6
-    | MINUS exp_6
-    | NOT exp_6
-    | XOR exp_6 {print_endline "5"}
-    | exp_6 {print_endline "operand"}
-    ;
-
-exp_6 :
+(* binary operator expressions *)
+    | exp OR exp
+    | exp AND exp
+    | exp EQ exp
+    | exp NEQ exp
+    | exp GT exp
+    | exp GTEQ exp
+    | exp LT exp
+    | exp LTEQ exp
+    | exp PLUS exp
+    | exp MINUS exp
+    | exp BOR exp
+    | exp XOR exp
+    | exp MULT exp
+    | exp DIV exp
+    | exp MOD exp
+    | exp LSHFT exp
+    | exp RSHFT exp
+    | exp BAND exp
+    | exp NAND exp
+(* unary operator expressions *)
+    | PLUS exp %prec unary
+    | MINUS exp %prec unary
+    | NOT exp %prec unary
+    | XOR exp %prec unary
+(* 'keyword functions' *)
     | IDENT LCURLY param RCURLY { } (*function calls *)
     | APPEND LCURLY exp COMMA exp RCURLY { } (* Append *)
-    | LEN LCURLY exp RCURLY { }
-    | CAP LCURLY exp RCURLY { }
-    | exp_7 {}
+    | LEN LCURLY exp RCURLY { } (* array/slice length *)
+    | CAP LCURLY exp RCURLY { } (* array/slice capacity *)
+    | LPAREN exp RPAREN { } (* '(' exp ')' *)
+(* identifiers and rvalues *)
+    | operand { }
     ;
 
 param:
@@ -388,11 +365,6 @@ param:
 d :
     | { }
     | COMMA exp d { }
-    ;
-
-exp_7 :
-    | LCURLY exp RCURLY { }
-    | operand { }
     ;
 
 operand :
