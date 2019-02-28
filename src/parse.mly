@@ -134,11 +134,18 @@ block_declaration :
 
 variable_declaration :
     | VAR variable_declaration_ { print_endline "GG VAR" }
-    ;
+;
+
 variable_declaration_ :
     | var_spec { print_endline "VAR" }
-    | LPAREN separated_list(SEMICOLON, var_spec) (*SEMI*) RPAREN {  }
-    ;
+    | LPAREN var_specs RPAREN {  }
+;
+
+var_specs :
+    | { }
+    | var_spec SEMICOLON var_specs { }
+;
+
 var_spec :
     | identifier_list type_spec option(var_spec_rhs) { print_endline "GG VAR" }
     | identifier_list option(var_spec_rhs) {  }
