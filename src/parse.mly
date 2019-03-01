@@ -104,7 +104,7 @@
 %left EQ NEQ GT GTEQ LT LTEQ
 %left PLUS MINUS BOR XOR
 %left MULT DIV MOD LSHFT RSHFT BAND NAND
-%nonassoc unary
+%nonassoc UNARY
 
 
 
@@ -242,10 +242,10 @@ statements :
 
 
 ident_type :
-    | BLANKID { } (*Blank Identifier *)
-    | IDENT { } (* Normal as is *)
-    | IDENT LBRACK ident_type RBRACK { } (* array and slice element access *)
-    | IDENT DOT ident_type { } (* Struct element access *)
+    | e=BLANKID {Blankid } (*Blank Identifier *)
+    | e=IDENT { Ident e} (* Normal as is *)
+    | e=IDENT LBRACK o= operand RBRACK {Indexed (e, o)} (* array and slice element access *)
+    | e1=IDENT DOT e2=ident_type {StructAccess(e1, e2)} (* Struct element access *)
     ;
 
 asg_tok :
@@ -279,12 +279,13 @@ statement :
     ;
 
 simple_statement :
-    | exp {  }
-    | inc_dec_statement {  }
-    | assignment_statement {  }
-    | short_val_declaration {  }
+    | exp SEMICOLON{  }
+    | inc_dec_statement SEMICOLON{  }
+    | assignment_statement SEMICOLON{  }
+    | short_val_declaration SEMICOLON{  }
     ;
 
+(*REDUNDANT GRAMMAR COULD BE COMBINED WITH STATEMENTS *)
 statement_block :
     | LCURLY statements RCURLY {  }
     ;
@@ -294,7 +295,7 @@ assignment_statement :
     ;
 
 short_val_declaration :
-    | identifier_list IASG expression_list{  }
+    | expression_list IASG expression_list{  }
     ;
 
 inc_dec_statement :
@@ -303,7 +304,7 @@ inc_dec_statement :
     ;
 
 if_statement :
-    | IF option(simple_statement) exp statement_block endif {  }
+    | IF exp statement_block endif {  }
     ;
 endif :
     | ELSE if_statement {  }
@@ -312,8 +313,8 @@ endif :
     ;
 
 switch_statement :
-    | SWITCH option(simple_statement) option(exp) LCURLY nonempty_list(expr_case_clause) RCURLY {  }
-    ;
+    | SWITCH  option(exp) LCURLY nonempty_list(expr_case_clause) RCURLY {  }
+
 expr_case_clause :
     | expr_switch_case COLON statements {  }
     ;
@@ -331,51 +332,47 @@ expression_list :
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
 (* binary operator expressions *)
-    | exp OR uexp
-    | exp AND uexp
-    | exp EQ uexp
-    | exp NEQ uexp
-    | exp GT uexp
-    | exp GTEQ uexp
-    | exp LT uexp
-    | exp LTEQ uexp
-    | exp PLUS uexp
-    | exp MINUS uexp
-    | exp BOR uexp
-    | exp XOR uexp
-    | exp MULT uexp
-    | exp DIV uexp
-    | exp MOD uexp
-    | exp LSHFT uexp
-    | exp RSHFT uexp
-    | exp BAND uexp
-    | exp NAND uexp { }
+    | e1=exp OR e2=exp
+    | e1=exp AND e2=exp
+    | e1=exp EQ e2=exp
+    | e1=exp NEQ e2=exp
+    | e1=exp GT e2=exp
+    | e1=exp GTEQ e2=exp
+    | e1=exp LT e2=exp
+    | e1=exp LTEQ e2=exp
+    | e1=exp PLUS e2=exp
+    | e1=exp MINUS e2=exp
+    | e1=exp BOR e2=exp
+    | e1=exp XOR e2=exp
+    | e1=exp MULT e2=exp
+    | e1=exp DIV e2=exp
+    | e1=exp MOD e2=exp
+    | e1=exp LSHFT e2=exp
+    | e1=exp RSHFT e2=exp
+    | e1=exp BAND e2=exp
+    | e1=exp NAND e2=exp { }
+    | PLUS e1=exp %prec UNARY { } 
+    | MINUS e1=exp %prec UNARY { }
+    | NOT e1=exp %prec UNARY { }
+    | XOR e1=exp %prec UNARY { }
+    | e=exp_other { }
 ;
-(* unary operator expressions NEED TO HANDLE THIS SOMEHOW LATER *)
- (*unaary can only be for one operand and that the expression cannot be *)
-uexp : 
-    | PLUS exp_other 
-    | MINUS exp_other   
-    | NOT exp_other 
-    | XOR exp_other  { }
-    | exp_other { }
-; 
 (* 'keyword functions' *)
 exp_other : 
-    | IDENT LPAREN expression_list RPAREN { } (*function calls *)
-    | APPEND LPAREN exp COMMA exp RPAREN { } (* Append *)
-    | LEN LPAREN exp RPAREN { } (* array/slice length *)
-    | CAP LPAREN exp RPAREN { } (* array/slice capacity *)
-    | LPAREN exp RPAREN { } (* '(' exp ')' *)
+    | e1=IDENT LPAREN e2=expression_list RPAREN {FunctionCall (e1, e2) } (*function calls *)
+    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN {Append (e1, e2) } (* Append *)
+    | LEN LPAREN e=exp RPAREN { Len e} (* array/slice length *)
+    | CAP LPAREN e=exp RPAREN { Cap e} (* array/slice capacity *)
+    | LPAREN e=exp RPAREN {ParenExpression e } (* '(' exp ')' *)
 (* identifiers and rvalues *)
-    | operand { }
+    | e=operand { e }
     ;
 
 operand :
-    | ident_type {print_endline "Identifier_variable"}
-    | LIT_INT
-    | LIT_BOOL
-    | LIT_FLOAT
-    | LIT_RUNE
-    | LIT_STRING {print_endline "Literal"}
+    | e=ident_type  { IdentifierExpression e}
+    | e=LIT_INT     { LitInt e}
+    | e=LIT_BOOL    { LitBool e}
+    | e=LIT_FLOAT  { LitFloat e}
+    | e=LIT_RUNE { LitRune e}
+    | e=LIT_STRING {LitString e}
     ;
