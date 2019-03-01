@@ -324,7 +324,7 @@ expr_switch_case :
     ;
 
 expression_list :
-    | separated_nonempty_list(COMMA, exp) {  }
+    | e = separated_nonempty_list(COMMA, exp ) { e }
     ;
 
 (*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
@@ -332,30 +332,30 @@ expression_list :
 (* Need to change if expression is called by placing semicolon in statement before *)
 exp :
 (* binary operator expressions *)
-    | e1=exp OR e2=exp
-    | e1=exp AND e2=exp
-    | e1=exp EQ e2=exp
-    | e1=exp NEQ e2=exp
-    | e1=exp GT e2=exp
-    | e1=exp GTEQ e2=exp
-    | e1=exp LT e2=exp
-    | e1=exp LTEQ e2=exp
-    | e1=exp PLUS e2=exp
-    | e1=exp MINUS e2=exp
-    | e1=exp BOR e2=exp
-    | e1=exp XOR e2=exp
-    | e1=exp MULT e2=exp
-    | e1=exp DIV e2=exp
-    | e1=exp MOD e2=exp
-    | e1=exp LSHFT e2=exp
-    | e1=exp RSHFT e2=exp
-    | e1=exp BAND e2=exp
-    | e1=exp NAND e2=exp { }
-    | PLUS e1=exp %prec UNARY { } 
-    | MINUS e1=exp %prec UNARY { }
-    | NOT e1=exp %prec UNARY { }
-    | XOR e1=exp %prec UNARY { }
-    | e=exp_other { }
+    | e1=exp OR e2=exp { Or(e1, e2) }
+    | e1=exp AND e2=exp { And(e1, e2) }
+    | e1=exp EQ e2=exp { Eq(e1, e2) }
+    | e1=exp NEQ e2=exp { Neq(e1, e2) }
+    | e1=exp GT e2=exp { Gt(e1, e2) }
+    | e1=exp GTEQ e2=exp { Gteq(e1, e2) }
+    | e1=exp LT e2=exp { Lt(e1, e2) }
+    | e1=exp LTEQ e2=exp { Lteq(e1, e2) }
+    | e1=exp PLUS e2=exp { Plus(e1, e2) }
+    | e1=exp MINUS e2=exp { Minus(e1, e2) }
+    | e1=exp BOR e2=exp { Bor(e1, e2) }
+    | e1=exp XOR e2=exp { Xor(e1, e2) }
+    | e1=exp MULT e2=exp { Mult(e1, e2) }
+    | e1=exp DIV e2=exp { Div(e1, e2) }
+    | e1=exp MOD e2=exp { Mod(e1, e2) }
+    | e1=exp LSHFT e2=exp { Lshft(e1, e2) }
+    | e1=exp RSHFT e2=exp {Rshft(e1, e2) }
+    | e1=exp BAND e2=exp { Band(e1, e2) }
+    | e1=exp NAND e2=exp { Nand(e1, e2) }
+    | PLUS e1=exp %prec UNARY { Uplus e1} 
+    | MINUS e1=exp %prec UNARY { Uminus e1}
+    | NOT e1=exp %prec UNARY { Not e1}
+    | XOR e1=exp %prec UNARY {Uxor e1 }
+    | e=exp_other { e } 
 ;
 (* 'keyword functions' *)
 exp_other : 
