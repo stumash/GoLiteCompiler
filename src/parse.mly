@@ -138,18 +138,15 @@ block_declaration :
 
 variable_declaration :
     | VAR vd=variable_declaration_ { vd }
-;
-
+    ;
 variable_declaration_ :
     | vd=var_spec { [vd] }
     | LPAREN vds=var_specs RPAREN { List.rev vds }
-;
-
+    ;
 var_specs :
     | { [] }
     | vd=var_spec SEMICOLON vds=var_specs { vd::vds }
-;
-
+    ;
 var_spec :
     | ids=identifier_list ts=type_spec eso=option(var_spec_rhs) { VariableDeclaration (ids, Some ts, eso) }
     | ids=identifier_list eso=option(var_spec_rhs) { VariableDeclaration (ids, None, eso) }
@@ -158,8 +155,8 @@ var_spec_rhs :
     | ASG es=expression_list { es }
     ;
 
-identifier_list :
-    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun s -> Identifier s) ids }
+type_declaration :
+    | TYPE s=IDENT ts=type_spec { [TypeDeclaration (Identifier s, ts)] }
     ;
 
 type_spec :
@@ -175,43 +172,26 @@ array_type_lit :
     | LBRACK e=exp RBRACK ts=type_spec { ArrayTypeLit (e, ts) }
     ;
 struct_type_lit :
-    (* embedded types not supported? *)
-    | STRUCT LCURLY separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY {  }
+    | STRUCT LCURLY x=separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
     ;
 struct_field_decl :
-    | identifier_list type_spec {  }
+    | ids=identifier_list ts=type_spec { (ids, ts) }
     ;
 slice_type_lit :
-    | LBRACK RBRACK type_spec {  }
+    | LBRACK RBRACK ts=type_spec { SliceTypeLiteral ts }
     ;
 
-type_declaration :
-    | TYPE IDENT type_spec {  }
-    ;
-
-
-(* Changes made were to add frame and a TYPE after RPAREN to specify return type of functions *)
 function_declaration :
-    | FUNC IDENT LPAREN frame RPAREN ret LCURLY statements RCURLY {  }
+    | FUNC s=IDENT LPAREN p=params RPAREN ts=option(type_spec) LCURLY ss=statements RCURLY
+      { FunctionDeclaration (Identifier s, p, ts, ss) }
     ;
 
-(*Frame is the set of parameters of the function *)
-frame :
-    | { (* No more parameters *)}
-    | IDENT c { }
+params :
+    | p=separated_list(COMMA, ids_w_type) { Parameters p }
     ;
 
-
-(* c is defined to take into account the two different styles to specify parameters *)
-c :
-    | type_spec frame   { }
-    | COMMA IDENT c  { }
-    ;
-
-(* Function return type *)
-ret :
-    | {(* No return type *)}
-    | TYPE { print_endline "some type "}
+ids_w_type :
+    | ids=identifier_list ts=type_spec { (ids, ts) }
     ;
 
 (*Print and print_ln staterments *)
@@ -269,7 +249,7 @@ statement :
     | s=short_val_declaration { s }
     | s=inc_dec_statement     { s }
     | s=print_statement       { s }
-    | RETURN e=exp            { ReturnStatement e }
+    | RETURN eo=option(exp)   { ReturnStatement eo }
     | ifs=if_statement        { IfStatement ifs }
     | s=switch_statement      { s }
     | s=for_loop              { s }
@@ -322,6 +302,10 @@ expr_case_clause :
 expr_switch_case :
     | DEFAULT { None }
     | CASE es=expression_list { Some es }
+    ;
+
+identifier_list :
+    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun s -> Identifier s) ids }
     ;
 
 expression_list :

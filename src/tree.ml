@@ -1,6 +1,6 @@
 (*Tree definitions *)
 
-type prog = 
+type prog =
   | Program of package * (declaration list)
   | EmptyProgram
 
@@ -10,7 +10,7 @@ and package =
 and declaration =
   | VariableDeclaration of identifier list * type_spec option * (expression list option)
   | TypeDeclaration of identifier * type_spec
-  | FunctionDeclaration of identifier * parameters * type_spec * (statement list)
+  | FunctionDeclaration of identifier * parameters * type_spec option * (statement list)
 
 and identifier =
   | Identifier of string
@@ -33,7 +33,7 @@ and statement =
   | Dec of expression
   | PrintStatement of expression list
   | PrintlnStatement of expression list
-  | ReturnStatement of expression
+  | ReturnStatement of expression option
   | IfStatement of if_statement
   | SwitchStatement of (statement option) * (expression option) * (switch_clause list)
   | ForStatement of (statement option) * (expression option) * (statement option) * (statement list)
