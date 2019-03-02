@@ -124,13 +124,13 @@ package :
     ;
 
 declarations :
-    | declarations declaration SEMICOLON  { print_endline "declarations" }
-    | { } 
+    | ds=declarations d=declaration SEMICOLON  { d @ ds }
+    | { [] } 
     ;
 
 declaration :
     | d=block_declaration { [d] ; print_endline "GG VAR" }
-    | function_declaration {  } (* function declarations cannot be in blocks *)
+    | d=function_declaration { [d] } (* function declarations cannot be in blocks *)
     ;
 
 block_declaration :
@@ -242,137 +242,135 @@ statements :
 
 
 ident_type :
-    | e=BLANKID {Blankid } (*Blank Identifier *)
-    | e=IDENT { Ident e} (* Normal as is *)
-    | e=IDENT LBRACK o= operand RBRACK {Indexed (e, o)} (* array and slice element access *)
-    | e1=IDENT DOT e2=ident_type {StructAccess(e1, e2)} (* Struct element access *)
+    | e=BLANKID                        { Blankid } (*Blank Identifier *)
+    | s=IDENT                          { Ident s } (* Normal as is *)
+    | s=IDENT LBRACK o=operand RBRACK  { Indexed (s, o) } (* array and slice element access *)
+    | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
     ;
 
 asg_tok :
-    | ASG
-    | PLUSEQ
-    | MINUSEQ
-    | MULTEQ
-    | DIVEQ
-    | MODEQ
-    | BANDEQ
-    | BOREQ
-    | XOREQ
-    | LSHFTEQ
-    | RSHFTEQ
-    | NANDEQ {}
+    | ASG     { ASG }
+    | PLUSEQ  { PLUSEQ }
+    | MINUSEQ { MINUSEQ }
+    | MULTEQ  { MULTEQ }
+    | DIVEQ   { DIVEQ }
+    | MODEQ   { MODEQ }
+    | BANDEQ  { BANDEQ }
+    | BOREQ   { BOREQ }
+    | XOREQ   { XOREQ }
+    | LSHFTEQ { LSHFTEQ }
+    | RSHFTEQ { RSHFTEQ }
+    | NANDEQ  { NANDEQ }
     ;
 
 statement :
-    | exp { }
-    | assignment_statement {  }
-    | block_declaration {  }
-    | short_val_declaration {  }
-    | inc_dec_statement {  }
-    | print_statement {  }
-    | RETURN exp  {  }
-    | if_statement {  }
-    | switch_statement {  }
-    | for_loop {  }
-    | BREAK {  }
-    | CONTINUE {  }
+    | e=exp                   { ExpressionStatement e }
+    | s=assignment_statement  { s }
+    | s=block_declaration     { s }
+    | s=short_val_declaration { s }
+    | s=inc_dec_statement     { s }
+    | s=print_statement       { s }
+    | RETURN e=exp            { ReturnStatement e }
+    | s=if_statement          { s }
+    | s=switch_statement      { s }
+    | s=for_loop              { s }
+    | BREAK                   { Break }
+    | CONTINUE                { Continue }
     ;
 
 simple_statement :
-    | exp SEMICOLON{  }
-    | inc_dec_statement SEMICOLON{  }
-    | assignment_statement SEMICOLON{  }
-    | short_val_declaration SEMICOLON{  }
+    | exp SEMICOLON                   { }
+    | inc_dec_statement SEMICOLON     { }
+    | assignment_statement SEMICOLON  { }
+    | short_val_declaration SEMICOLON { }
     ;
 
-(*REDUNDANT GRAMMAR COULD BE COMBINED WITH STATEMENTS *)
 statement_block :
-    | LCURLY statements RCURLY {  }
+    | LCURLY ss=statements RCURLY { ss }
     ;
 
 assignment_statement :
-    | expression_list asg_tok expression_list {  }
+    | es1=expression_list at=asg_tok es2=expression_list { AssignmentStatement (es1, at, es2) }
     ;
 
 short_val_declaration :
-    | expression_list IASG expression_list{  }
+    | es1=expression_list IASG es2=expression_list { ShortValDeclaration (es1, es2) }
     ;
 
 inc_dec_statement :
-    | exp INC {  }
-    | exp DEC {  }
+    | exp INC { Inc e }
+    | exp DEC { Dec e }
     ;
 
 if_statement :
-    | IF exp statement_block endif {  }
+    | IF e=exp ss=statement_block en=endif { If (None, e, ss, en) }
     ;
 endif :
-    | ELSE if_statement {  }
-    | ELSE statement_block {  }
-    | { }
+    | ELSE i=if_statement { Some (Elseif i) }
+    | ELSE ss=statement_block { Some (Else ss) }
+    | { None }
     ;
 
 switch_statement :
-    | SWITCH  option(exp) LCURLY nonempty_list(expr_case_clause) RCURLY {  }
+    | SWITCH  eo=option(exp) LCURLY
+          scl=nonempty_list(expr_case_clause)
+      RCURLY { SwitchStatement (None, eo, scl) }
 
 expr_case_clause :
-    | expr_switch_case COLON statements {  }
+    | esc=expr_switch_case COLON ss=statements { if esc = None then Default ss else Case (esc, ss) }
     ;
 expr_switch_case :
-    | DEFAULT {  }
-    | CASE expression_list {  }
+    | DEFAULT { None }
+    | CASE es=expression_list { es }
     ;
 
 expression_list :
-    | e = separated_nonempty_list(COMMA, exp ) { e }
+    | es=separated_nonempty_list(COMMA, exp) { es }
     ;
 
-(*Expression grammar NEED TO DECIDE WHATS TO BE DONE REGARDING TYPE *)
-(*Need to add function calls which will be defined after this *)
-(* Need to change if expression is called by placing semicolon in statement before *)
 exp :
 (* binary operator expressions *)
-    | e1=exp OR e2=exp { Or(e1, e2) }
-    | e1=exp AND e2=exp { And(e1, e2) }
-    | e1=exp EQ e2=exp { Eq(e1, e2) }
-    | e1=exp NEQ e2=exp { Neq(e1, e2) }
-    | e1=exp GT e2=exp { Gt(e1, e2) }
-    | e1=exp GTEQ e2=exp { Gteq(e1, e2) }
-    | e1=exp LT e2=exp { Lt(e1, e2) }
-    | e1=exp LTEQ e2=exp { Lteq(e1, e2) }
-    | e1=exp PLUS e2=exp { Plus(e1, e2) }
-    | e1=exp MINUS e2=exp { Minus(e1, e2) }
-    | e1=exp BOR e2=exp { Bor(e1, e2) }
-    | e1=exp XOR e2=exp { Xor(e1, e2) }
-    | e1=exp MULT e2=exp { Mult(e1, e2) }
-    | e1=exp DIV e2=exp { Div(e1, e2) }
-    | e1=exp MOD e2=exp { Mod(e1, e2) }
-    | e1=exp LSHFT e2=exp { Lshft(e1, e2) }
-    | e1=exp RSHFT e2=exp {Rshft(e1, e2) }
-    | e1=exp BAND e2=exp { Band(e1, e2) }
-    | e1=exp NAND e2=exp { Nand(e1, e2) }
-    | PLUS e1=exp %prec UNARY { Uplus e1} 
+    | e1=exp OR e2=exp         { Or (e1, e2) }
+    | e1=exp AND e2=exp        { And (e1, e2) }
+    | e1=exp EQ e2=exp         { Eq (e1, e2) }
+    | e1=exp NEQ e2=exp        { Neq (e1, e2) }
+    | e1=exp GT e2=exp         { Gt (e1, e2) }
+    | e1=exp GTEQ e2=exp       { Gteq (e1, e2) }
+    | e1=exp LT e2=exp         { Lt (e1, e2) }
+    | e1=exp LTEQ e2=exp       { Lteq (e1, e2) }
+    | e1=exp PLUS e2=exp       { Plus (e1, e2) }
+    | e1=exp MINUS e2=exp      { Minus (e1, e2) }
+    | e1=exp BOR e2=exp        { Bor (e1, e2) }
+    | e1=exp XOR e2=exp        { Xor (e1, e2) }
+    | e1=exp MULT e2=exp       { Mult (e1, e2) }
+    | e1=exp DIV e2=exp        { Div (e1, e2) }
+    | e1=exp MOD e2=exp        { Mod (e1, e2) }
+    | e1=exp LSHFT e2=exp      { Lshft (e1, e2) }
+    | e1=exp RSHFT e2=exp      { Rshft (e1, e2) }
+    | e1=exp BAND e2=exp       { Band (e1, e2) }
+    | e1=exp NAND e2=exp       { Nand (e1, e2) }
+    | PLUS e1=exp %prec UNARY  { Uplus e1}
     | MINUS e1=exp %prec UNARY { Uminus e1}
-    | NOT e1=exp %prec UNARY { Not e1}
-    | XOR e1=exp %prec UNARY {Uxor e1 }
-    | e=exp_other { e } 
-;
+    | NOT e1=exp %prec UNARY   { Not e1}
+    | XOR e1=exp %prec UNARY   { Uxor e1 }
+    | e=exp_other              { e }
+    ;
 (* 'keyword functions' *)
 exp_other : 
-    | e1=IDENT LPAREN e2=expression_list RPAREN {FunctionCall (e1, e2) } (*function calls *)
-    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN {Append (e1, e2) } (* Append *)
-    | LEN LPAREN e=exp RPAREN { Len e} (* array/slice length *)
-    | CAP LPAREN e=exp RPAREN { Cap e} (* array/slice capacity *)
-    | LPAREN e=exp RPAREN {ParenExpression e } (* '(' exp ')' *)
-(* identifiers and rvalues *)
-    | e=operand { e }
+    | e1=IDENT LPAREN e2=expression_list RPAREN { FunctionCall (e1, e2) } (*function calls *)
+    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN  { Append (e1, e2) } (* Append *)
+    | LEN LPAREN e=exp RPAREN                   { Len e } (* array/slice length *)
+    | CAP LPAREN e=exp RPAREN                   { Cap e } (* array/slice capacity *)
+    | LPAREN e=exp RPAREN                       { ParenExpression e } (* '(' exp ')' *)
+    | e=operand                                 { e }
     ;
 
+(* identifiers and rvalues *)
 operand :
-    | e=ident_type  { IdentifierExpression e}
-    | e=LIT_INT     { LitInt e}
-    | e=LIT_BOOL    { LitBool e}
-    | e=LIT_FLOAT  { LitFloat e}
-    | e=LIT_RUNE { LitRune e}
-    | e=LIT_STRING {LitString e}
+    | e=ident_type { IdentifierExpression e }
+    | e=LIT_INT    { LitInt e }
+    | e=LIT_BOOL   { LitBool e }
+    | e=LIT_FLOAT  { LitFloat e }
+    | e=LIT_RUNE   { LitRune e }
+    | e=LIT_STRING { LitString e }
     ;
