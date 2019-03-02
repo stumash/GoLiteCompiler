@@ -8,7 +8,7 @@ and package =
   | Package of string
 
 and declaration =
-  | VariableDeclaration of identifier list * type_spec
+  | VariableDeclaration of identifier list * type_spec option * (expression list option)
   | TypeDeclaration of identifier * type_spec
   | FunctionDeclaration of identifier * parameters * type_spec * (statement list)
 
@@ -31,7 +31,8 @@ and statement =
   | ShortValDeclaration of (identifier list) * (expression list)
   | Inc of expression
   | Dec of expression
-  | PrintStatement of expression
+  | PrintStatement of expression list
+  | PrintlnStatement of expression list
   | ReturnStatement of expression
   | IfStatement of if_statement
   | SwitchStatement of (statement option) * (expression option) * (switch_clause list)

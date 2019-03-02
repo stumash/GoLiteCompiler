@@ -106,21 +106,19 @@
 %left MULT DIV MOD LSHFT RSHFT BAND NAND
 %nonassoc UNARY
 
-
-
-(* change <unit> to <anytype> as needed *)
-%start <unit> program
+(* start production and return type of parser *)
+%start <prog> program
 
 
 %%
 (* GRAMMAR  *)
 
 program :
-    | package declarations EOF { print_endline "top level" }
+    | p=package ds=declarations EOF { Program (p, ds) }
     ;
 
 package :
-    | PACKAGE package_name=IDENT SEMICOLON { Printf.printf "package %s\n"  }
+    | PACKAGE s=IDENT SEMICOLON { Package s }
     ;
 
 declarations :
@@ -129,52 +127,52 @@ declarations :
     ;
 
 declaration :
-    | d=block_declaration { [d] ; print_endline "GG VAR" }
+    | d=block_declaration { d }
     | d=function_declaration { [d] } (* function declarations cannot be in blocks *)
     ;
 
 block_declaration :
-    | variable_declaration { print_endline "GG VAR" }
-    | type_declaration {  }
+    | vd=variable_declaration { vd }
+    | td=type_declaration { td }
     ;
 
 variable_declaration :
-    | VAR variable_declaration_ { print_endline "GG VAR" }
+    | VAR vd=variable_declaration_ { vd }
 ;
 
 variable_declaration_ :
-    | var_spec { print_endline "VAR" }
-    | LPAREN var_specs RPAREN {  }
+    | vd=var_spec { [vd] }
+    | LPAREN vds=var_specs RPAREN { List.rev vds }
 ;
 
 var_specs :
-    | { }
-    | var_spec SEMICOLON var_specs { }
+    | { [] }
+    | vd=var_spec SEMICOLON vds=var_specs { vd::vds }
 ;
 
 var_spec :
-    | identifier_list type_spec option(var_spec_rhs) { print_endline "GG VAR" }
-    | identifier_list option(var_spec_rhs) {  }
+    | ids=identifier_list ts=type_spec eso=option(var_spec_rhs) { VariableDeclaration (ids, Some ts, eso) }
+    | ids=identifier_list eso=option(var_spec_rhs) { VariableDeclaration (ids, None, eso) }
     ;
 var_spec_rhs :
-    | ASG expression_list { }
+    | ASG es=expression_list { es }
     ;
 
 identifier_list :
-    | separated_nonempty_list(COMMA, IDENT) {  }
+    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun s -> Identifier s) ids }
     ;
 
 type_spec :
-    | IDENT { print_endline "GG IDENT" }
-    | type_literal {  }
+    | s=IDENT { IdentifierType (Identifier s) }
+    | tl=type_literal { tl }
     ;
 type_literal :
-    | array_type_lit {  }
-    | struct_type_lit {  }
-    | slice_type_lit {  }
+    | atl=array_type_lit { atl }
+    | strtl=struct_type_lit { strtl }
+    | sltl=slice_type_lit { sltl }
     ;
 array_type_lit :
-    | LBRACK exp RBRACK type_spec {  }
+    | LBRACK e=exp RBRACK ts=type_spec { ArrayTypeLit (e, ts) }
     ;
 struct_type_lit :
     (* embedded types not supported? *)
@@ -218,26 +216,27 @@ ret :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN expression_list RPAREN
-    | PRINTLN LPAREN expression_list RPAREN { print_endline "Printing something " }
+    | PRINT LPAREN es=expression_list RPAREN   { PrintStatement es }
+    | PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement es }
     ;
 
 (*For statements *)
 for_loop :
-    | FOR loop_type { print_endline "For" }
+    | FOR fl=loop_type { fl }
     ;
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
-    | LCURLY statements RCURLY {print_endline "Infinite loop"}
-    | exp LCURLY statements RCURLY {print_endline "While loop "}
-    | statement SEMICOLON exp SEMICOLON statement  LCURLY statements RCURLY {print_endline "Normal Loop"}
+    | LCURLY ss=statements RCURLY { ForStatement (None, None, None, ss) }
+    | e=exp LCURLY ss=statements RCURLY { ForStatement (None, Some e, None, ss) }
+    | s1=statement SEMICOLON e=exp SEMICOLON s2=statement LCURLY ss=statements RCURLY
+      { ForStatement (Some s1, Some e, Some s2, ss) }
     ;
 
 (* statements *)
 statements :
-    | statement SEMICOLON statements (*SEMI*) {  }
-    | statement_block {  }
+    | s=statement SEMICOLON ss=statements (*SEMI*) { s::ss }
+    | { [] }
     ;
 
 
@@ -271,7 +270,7 @@ statement :
     | s=inc_dec_statement     { s }
     | s=print_statement       { s }
     | RETURN e=exp            { ReturnStatement e }
-    | s=if_statement          { s }
+    | ifs=if_statement        { IfStatement ifs }
     | s=switch_statement      { s }
     | s=for_loop              { s }
     | BREAK                   { Break }
@@ -294,12 +293,12 @@ assignment_statement :
     ;
 
 short_val_declaration :
-    | es1=expression_list IASG es2=expression_list { ShortValDeclaration (es1, es2) }
+    | ids=identifier_list IASG es=expression_list { ShortValDeclaration (ids, es) }
     ;
 
 inc_dec_statement :
-    | exp INC { Inc e }
-    | exp DEC { Dec e }
+    | e=exp INC { Inc e }
+    | e=exp DEC { Dec e }
     ;
 
 if_statement :
@@ -317,11 +316,12 @@ switch_statement :
       RCURLY { SwitchStatement (None, eo, scl) }
 
 expr_case_clause :
-    | esc=expr_switch_case COLON ss=statements { if esc = None then Default ss else Case (esc, ss) }
+    | esc=expr_switch_case COLON ss=statements
+      { match esc with | None -> Default ss | Some es -> Case (es, ss) }
     ;
 expr_switch_case :
     | DEFAULT { None }
-    | CASE es=expression_list { es }
+    | CASE es=expression_list { Some es }
     ;
 
 expression_list :
