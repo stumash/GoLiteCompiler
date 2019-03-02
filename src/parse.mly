@@ -107,7 +107,7 @@
 %nonassoc UNARY
 
 (* start production and return type of parser *)
-%start <prog> program
+%start <Tree.prog> program
 
 
 %%
@@ -123,13 +123,13 @@ package :
     ;
 
 declarations :
-    | ds=declarations d=declaration SEMICOLON  { d @ ds }
-    | { [] } 
+    | ds=declarations d=declaration SEMICOLON  { ds @ [d] }
+    | { [] }
     ;
 
 declaration :
     | d=block_declaration { d }
-    | d=function_declaration { [d] } (* function declarations cannot be in blocks *)
+    | d=function_declaration { d } (* function declarations cannot be in blocks *)
     ;
 
 block_declaration :
@@ -141,23 +141,23 @@ variable_declaration :
     | VAR vd=variable_declaration_ { vd }
     ;
 variable_declaration_ :
-    | vd=var_spec { [vd] }
-    | LPAREN vds=var_specs RPAREN { List.rev vds }
+    | vd=var_spec { VariableDeclaration [vd] }
+    | LPAREN vds=var_specs RPAREN { VariableDeclaration vds }
     ;
 var_specs :
     | { [] }
     | vd=var_spec SEMICOLON vds=var_specs { vd::vds }
     ;
 var_spec :
-    | ids=identifier_list ts=type_spec eso=option(var_spec_rhs) { VariableDeclaration (ids, Some ts, eso) }
-    | ids=identifier_list eso=option(var_spec_rhs) { VariableDeclaration (ids, None, eso) }
+    | ids=identifier_list ts=type_spec eso=option(var_spec_rhs) { (ids, Some ts, eso) }
+    | ids=identifier_list eso=option(var_spec_rhs) { (ids, None, eso) }
     ;
 var_spec_rhs :
     | ASG es=expression_list { es }
     ;
 
 type_declaration :
-    | TYPE s=IDENT ts=type_spec { [TypeDeclaration (Identifier s, ts)] }
+    | TYPE s=IDENT ts=type_spec { TypeDeclaration [(Identifier s, ts)] }
     ;
 
 type_spec :
@@ -170,7 +170,7 @@ type_literal :
     | sltl=slice_type_lit { sltl }
     ;
 array_type_lit :
-    | LBRACK e=exp RBRACK ts=type_spec { ArrayTypeLit (e, ts) }
+    | LBRACK e=exp RBRACK ts=type_spec { ArrayTypeLiteral (e, ts) }
     ;
 struct_type_lit :
     | STRUCT LCURLY x=separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
@@ -246,7 +246,7 @@ asg_tok :
 statement :
     | e=exp                   { ExpressionStatement e }
     | s=assignment_statement  { s }
-    | s=block_declaration     { s }
+    | d=block_declaration     { DeclarationStatement d }
     | s=short_val_declaration { s }
     | s=inc_dec_statement     { s }
     | s=print_statement       { s }
@@ -341,7 +341,7 @@ exp :
     | e=exp_other              { e }
     ;
 (* 'keyword functions' *)
-exp_other : 
+exp_other :
     | e1=IDENT LPAREN e2=expression_list RPAREN { FunctionCall (e1, e2) } (*function calls *)
     | APPEND LPAREN e1=exp COMMA e2=exp RPAREN  { Append (e1, e2) } (* Append *)
     | LEN LPAREN e=exp RPAREN                   { Len e } (* array/slice length *)

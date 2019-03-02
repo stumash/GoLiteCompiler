@@ -8,9 +8,10 @@ and package =
   | Package of string
 
 and declaration =
-  | VariableDeclaration of identifier list * type_spec option * (expression list option)
-  | TypeDeclaration of identifier * type_spec
   | FunctionDeclaration of identifier * parameters * type_spec option * (statement list)
+  (* var and type declarations can contain multiple 'lines' of declarations *)
+  | VariableDeclaration of (identifier list * type_spec option * (expression list option)) list 
+  | TypeDeclaration of (identifier * type_spec) list
 
 and identifier =
   | Identifier of string
