@@ -115,6 +115,7 @@
 
 program :
     | p=package ds=declarations EOF { Program (p, ds) }
+    | EOF { EmptyProgram }
     ;
 
 package :
