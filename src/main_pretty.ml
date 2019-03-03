@@ -1,4 +1,4 @@
-open Parserexceptions
+open Parser_exceptions
 
 let _ =
     let lexbuf = Lexing.from_channel stdin in

@@ -1,8 +1,8 @@
 %{
     (* Add to contents of generated parse.ml *)
 
-    open Tree
-    open Parserexceptions
+    open Tree 
+    open Parser_exceptions
 
     (* expression list to identifier list *)
     let es_to_ids es =
