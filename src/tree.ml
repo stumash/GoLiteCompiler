@@ -10,7 +10,7 @@ and package =
 and declaration =
   | FunctionDeclaration of identifier * parameters * type_spec option * (statement list)
   (* var and type declarations can contain multiple 'lines' of declarations *)
-  | VariableDeclaration of (identifier list * type_spec option * (expression list option)) list 
+  | VariableDeclaration of (identifier list * type_spec option * (expression list option)) list
   | TypeDeclaration of (identifier * type_spec) list
 
 and identifier =

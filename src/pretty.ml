@@ -6,8 +6,8 @@ let rec pp_prog prog =
     match prog with
     | _ -> p "let's get this shit started!"
 
-and pp_exp exp = 
-    match exp with 
+and pp_exp exp =
+    match exp with
     | Or (e1, e2)                   -> pp_exp e1; p " || "; pp_exp e2
     | And (e1, e2)                  -> pp_exp e1; p " && "; pp_exp e2
     | Eq (e1, e2)                   -> pp_exp e1; p " == "; pp_exp e2
@@ -44,7 +44,7 @@ and pp_exp exp =
     | IdentifierExpression (id_exp) -> pp_id_exp id_exp
 
 and pp_id_exp id_exp =
-    match id_exp with 
+    match id_exp with
     | Ident (s)                -> p s
     | Blankid                  -> p "_"
     | Indexed (s, e)           -> printf "%s[" s; pp_exp e; p "]"
