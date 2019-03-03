@@ -1,15 +1,15 @@
 %{
-(* Add to contents of generated parse.ml *)
+    (* Add to contents of generated parse.ml *)
 
-open Tree
-open Parserexceptions
+    open Tree
+    open Parserexceptions
 
-(* expression list to identifier list *)
-let es_to_ids es =
-    let e_to_id = function
-        | IdentifierExpression (Ident s) -> Identifier s
-        | _ -> raise ExpressionIsNotIdentifier in
-    List.map e_to_id es
+    (* expression list to identifier list *)
+    let es_to_ids es =
+        let e_to_id = function
+            | IdentifierExpression (Ident s) -> Identifier s
+            | _ -> raise ExpressionIsNotIdentifier in
+        List.map e_to_id es
 %}
 
 (* TOKENS *)
@@ -232,7 +232,7 @@ statements :
 
 
 ident_type :
-    | e=BLANKID                        { Blankid } (*Blank Identifier *)
+    | BLANKID                        { Blankid } (*Blank Identifier *)
     | s=IDENT                          { Ident s } (* Normal as is *)
     | s=IDENT LBRACK o=operand RBRACK  { Indexed (s, o) } (* array and slice element access *)
     | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
