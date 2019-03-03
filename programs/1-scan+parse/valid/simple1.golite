@@ -3,3 +3,10 @@ package main
 var ( 
     x, y int
 )
+
+func main() {
+    x = 0
+    x += 1
+    x += 4
+    x++
+}
