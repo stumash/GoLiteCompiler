@@ -167,9 +167,16 @@ var_spec_rhs :
     ;
 
 type_declaration :
-    | TYPE s=IDENT ts=type_spec { TypeDeclaration [(Identifier s, ts)] }
+    | TYPE td=type_declaration_ { td }
     ;
-
+type_declaration_ :
+    | s=IDENT ts=type_spec { TypeDeclaration [(Identifier s, ts)] }
+    | LPAREN s_tds=s_type_specs RPAREN { TypeDeclaration s_tds }
+    ;
+s_type_specs :
+    | { [] }
+    | s=IDENT td=type_spec SEMICOLON s_tds=s_type_specs { (Identifier s, td)::s_tds }
+    ;
 type_spec :
     | s=IDENT { IdentifierType (Identifier s) }
     | tl=type_literal { tl }
@@ -294,11 +301,11 @@ inc_dec_statement :
     ;
 
 if_statement :
-    | IF e=exp ss=statement_block en=endif { If (None, e, ss, en) }
+    | IF e=exp LCURLY ss=statement_block RCURLY en=endif { If (None, e, ss, en) }
     ;
 endif :
-    | ELSE i=if_statement { Some (Elseif i) }
-    | ELSE ss=statement_block { Some (Else ss) }
+    | ELSE ifs=if_statement { Some (Elseif ifs) }
+    | ELSE LCURLY ss=statement_block RCURLY { Some (Else ss) }
     | { None }
     ;
 
