@@ -1,5 +1,15 @@
 %{
-    open Tree
+(* Add to contents of generated parse.ml *)
+
+open Tree
+open Parserexceptions
+
+(* expression list to identifier list *)
+let es_to_ids es =
+    let e_to_id = function
+        | IdentifierExpression (Ident s) -> Identifier s
+        | _ -> raise ExpressionIsNotIdentifier in
+    List.map e_to_id es
 %}
 
 (* TOKENS *)
@@ -258,12 +268,13 @@ statement :
     | CONTINUE                { Continue }
     ;
 
-simple_statement :
-    | exp SEMICOLON                   { }
-    | inc_dec_statement SEMICOLON     { }
-    | assignment_statement SEMICOLON  { }
-    | short_val_declaration SEMICOLON { }
-    ;
+(* TODO uncomment and resolve *)
+(*simple_statement :*)
+    (*| exp SEMICOLON                   { }*)
+    (*| inc_dec_statement SEMICOLON     { }*)
+    (*| assignment_statement SEMICOLON  { }*)
+    (*| short_val_declaration SEMICOLON { }*)
+    (*;*)
 
 statement_block :
     | LCURLY ss=statements RCURLY { ss }
@@ -274,7 +285,7 @@ assignment_statement :
     ;
 
 short_val_declaration :
-    | ids=identifier_list IASG es=expression_list { ShortValDeclaration (ids, es) }
+    | ids=expression_list IASG es=expression_list { ShortValDeclaration (es_to_ids ids, es) }
     ;
 
 inc_dec_statement :
