@@ -7,7 +7,7 @@ let sgi2i sgi =
         if len >= 2 && sgi.[0] == '0' && sgi.[1] != 'X' && sgi.[1] != 'x' then
             "0o" ^ (String.sub sgi 1 (len-1))
         else sgi in
-    print_endline soi; int_of_string soi
+    int_of_string soi
 
 (* String of Go Float to Float *)
 (* Go float syntax is compatible with OCaml float syntax *)
