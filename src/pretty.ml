@@ -15,15 +15,14 @@ and pp_decl decl =
     match decl with
     | FunctionDeclaration (id, params, tso, ss) ->
         pp_id id; p "("; pp_params params; p ") "; ifsome tso pp_ts; p " {\n";
-        List.iter pp_stmt ss;
-        p "}\n"
+        List.iter pp_stmt ss; p "}\n"
     | VariableDeclaration vds ->
-        let pp_vd (ids, tso, eso) =
+        let pp_vd (ids : identifier list)  (tso : type_spec option) (eso : expression list option) =
             pp_idlist ids; p " "; ifsome tso pp_ts; p " "; ifsome eso pp_explist; pln "" in
-        match vds with
+        (match vds with
         | []   -> p "var ( )\n"
-        | [vd] -> p "var "; pp_vd vd
-        | vds  -> p "var (\n"; List.iter pp_vd vds; p ")\n"
+        | [vds] -> p "var "; pp_vd vds
+        | vds  -> p "var (\n"; List.iter pp_vd vds; p ")\n")
     | TypeDeclaration tds ->
         let pp_td (id, ts) = pp_id id; p " "; pp_ts ts; pln "" in
         match tds with
