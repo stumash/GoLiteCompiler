@@ -48,10 +48,11 @@ and pp_stmt stmt =
     | PrintlnStatement es                 -> p "println("; pp_explist es; pln ")"
     | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; pln ""
     | IfStatement ifs                     -> pp_ifs ifs
-    | SwitchStatement (so, eo, scs)       ->
-    | ForStatement (so, eo, so, ss)       ->
+    | SwitchStatement (so, eo, scs)       -> p "TODO"
+    | ForStatement (so, eo, so, ss)       -> pp_for fs
     | Break                               -> pln "break"
     | Continue                            -> pln "continue"
+    | _                                   -> p "" (*For statement option when it is None in if statement*)
 
 
 (* assignment operator *)
@@ -72,14 +73,17 @@ and pp_aop aop =
 
 (* if statement *)
 and pp_ifs (If (so, e, ss, elso)) =
-    () (* TODO *)
+    p "if "; pp_stmt so; p ";"; pp_exp e
+    pln "{"
+    List.iter (pp_stmt) ss
+    pln "}"
+    pp_else elso
 
 (* else statement *)
 and pp_els els = 
-    (* TODO *)
     match els with
-    | Elseif ifs -> ()
-    | Else ss -> ()
+    | Elseif ifs -> p "else "; pln "{"; pp_ifs ifs; pln "}"  
+    | Else ss -> p "else"; pln "{"; List.iter (pp_stmt) ss; pln "}"
 
 (* switch clause *)
 and pp_sc sc =
@@ -87,6 +91,16 @@ and pp_sc sc =
     match sc with
     | Default ss -> ()
     | Case (es, ss) -> ()
+
+(*for statements *)
+and pp_for (ForStatement(so, eo, so, sl)) = 
+  p "for"; pp_stmt so; p ";"; pp_exp eo; p ";"; pp_stmt so
+  pln "{"
+  List.iter (pp_stmt) sl
+  pln "}"
+
+
+    
 
 (* expression *)
 and pp_exp exp =
