@@ -31,9 +31,28 @@ and pp_decl decl =
         | [td] -> p "type "; pp_td td
         | tds  -> p "type (\n"; List.iter pp_td tds; p ")\n"
 
+(*parameters printing for functions *)
+and pp_params ps : parameters  = 
+  let rec id_print ids  = 
+    match ids with 
+      | h :: [] -> pp_id h
+      | h :: t -> pp_id h; p ","; id_print t
+      | [] -> pp_id Identifier ("") in
+  let final (ids : identifier list) (t: type_spec) = 
+    id_print ids; pp_ts t; p "," in
+  List.iter (final) ps 
+  
 (* identifier *)
 and pp_id (Identifier s) =
     p s
+
+(*type spec*)
+and pp_ts tp = 
+    match tp with 
+    | IdentifierType id -> pp_id id 
+    | ArrayTypeLiteral (e, t) -> p "["; pp_exp; p "]"; pp_ts t
+    | StructTypeLiteral str -> pp_param str 
+    | SliceTypeLiteral t -> p "[]"; pp_ts t  
 
 (* statement *)
 and pp_stmt stmt =
@@ -48,7 +67,7 @@ and pp_stmt stmt =
     | PrintlnStatement es                 -> p "println("; pp_explist es; pln ")"
     | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; pln ""
     | IfStatement ifs                     -> pp_ifs ifs
-    | SwitchStatement (so, eo, scs)       -> p "TODO"
+    | SwitchStatement (so, eo, scs)       -> p "switch"; pp_stmt so; p ";"; pp_eo; p ";"; pln "{"; pp_sc scs; pln "}"
     | ForStatement (so, eo, so, ss)       -> pp_for fs
     | Break                               -> pln "break"
     | Continue                            -> pln "continue"
@@ -87,10 +106,9 @@ and pp_els els =
 
 (* switch clause *)
 and pp_sc sc =
-    (* TODO *)
     match sc with
-    | Default ss -> ()
-    | Case (es, ss) -> ()
+    | Default ss -> p "default :"; List.iter (pp_stmt) ss; pln ""
+    | Case (es, ss) -> p "case "; List.iter (pp_exp) es; p ":"; List.iter (pp_stmt) ss; pln "" 
 
 (*for statements *)
 and pp_for (ForStatement(so, eo, so, sl)) = 
