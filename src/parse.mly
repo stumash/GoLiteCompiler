@@ -1,7 +1,7 @@
 %{
     (* Add to contents of generated parse.ml *)
 
-    open Tree 
+    open Tree
     open Parser_exceptions
 
     (* expression list to identifier list *)
@@ -10,6 +10,17 @@
             | IdentifierExpression (Ident s) -> Identifier s
             | _ -> raise ExpressionIsNotIdentifier in
         List.map e_to_id es
+
+    (* raise err if o1 and o2 are None *)
+    let err_ifboth_None o1 o2 err =
+        match o1,o2 with
+        | None,None -> raise err
+        | _,_ -> ()
+
+    (* raise err if l1 and l2 differ in length *)
+    let err_if_neq_len l1 l2 err =
+        if (List.length l1) != (List.length l2) then raise err
+        else ()
 %}
 
 (* TOKENS *)
@@ -159,8 +170,12 @@ var_specs :
     | vd=var_spec SEMICOLON vds=var_specs { vd::vds }
     ;
 var_spec :
-    | ids=identifier_list ts=type_spec eso=option(var_spec_rhs) { (ids, Some ts, eso) }
-    | ids=identifier_list eso=option(var_spec_rhs) { (ids, None, eso) }
+    | ids=identifier_list tso=option(type_spec) eso=option(var_spec_rhs)
+      {
+          err_ifboth_None tso eso VarDecNeedsTypeOrInit;
+          (match eso with | None -> () | Some es -> err_if_neq_len ids es VarDecIdsLenNeqExpsLen);
+          (ids, tso, eso)
+      }
     ;
 var_spec_rhs :
     | ASG es=expression_list { es }
@@ -239,7 +254,7 @@ statements :
 
 
 ident_type :
-    | BLANKID                        { Blankid } (*Blank Identifier *)
+    | BLANKID                          { Blankid } (*Blank Identifier *)
     | s=IDENT                          { Ident s } (* Normal as is *)
     | s=IDENT LBRACK o=operand RBRACK  { Indexed (s, o) } (* array and slice element access *)
     | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
@@ -292,7 +307,11 @@ assignment_statement :
     ;
 
 short_val_declaration :
-    | ids=expression_list IASG es=expression_list { ShortValDeclaration (es_to_ids ids, es) }
+    | ids=expression_list IASG es=expression_list
+      {
+          err_if_neq_len ids es VarDecIdsLenNeqExpsLen;
+          ShortValDeclaration (es_to_ids ids, es)
+      }
     ;
 
 inc_dec_statement :
@@ -316,7 +335,11 @@ switch_statement :
 
 expr_case_clause :
     | esc=expr_switch_case COLON ss=statements
-      { match esc with | None -> Default ss | Some es -> Case (es, ss) }
+      {
+          match esc with
+          | None -> Default ss
+          | Some es -> Case (es, ss)
+      }
     ;
 expr_switch_case :
     | DEFAULT { None }

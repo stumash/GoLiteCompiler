@@ -1,4 +1,4 @@
-(*Tree definitions *)
+(* Abstract Syntax Tree definition *)
 
 type prog =
   | Program of package * (declaration list)
@@ -9,7 +9,6 @@ and package =
 
 and declaration =
   | FunctionDeclaration of identifier * parameters * type_spec option * (statement list)
-  (* var and type declarations can contain multiple 'lines' of declarations *)
   | VariableDeclaration of (identifier list * type_spec option * (expression list option)) list
   | TypeDeclaration of (identifier * type_spec) list
 
@@ -48,6 +47,10 @@ and else_statement =
   | Elseif of if_statement
   | Else of (statement list)
 
+and switch_clause =
+  | Default of statement list
+  | Case of (expression list) * (statement list)
+
 and assignment_operator =
   | ASG
   | PLUSEQ
@@ -61,10 +64,6 @@ and assignment_operator =
   | LSHFTEQ
   | RSHFTEQ
   | NANDEQ
-
-and switch_clause =
-  | Default of statement list
-  | Case of (expression list) * (statement list)
 
 and expression =
 (* binary expression *)

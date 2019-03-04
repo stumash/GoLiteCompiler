@@ -1,1 +1,3 @@
 exception ExpressionIsNotIdentifier
+exception VarDecNeedsTypeOrInit
+exception VarDecIdsLenNeqExpsLen
