@@ -7,8 +7,8 @@ let rec pp_prog prog =
     | _ -> p "let's get this shit started!"
 
 (* package *)
-and pp_package (Package s) =
-    printf "package %s\n" s
+and pp_package (Package str) =
+    printf "package %s\n" str
 
 (* declaration *)
 and pp_decl decl =
@@ -19,39 +19,39 @@ and pp_decl decl =
         p "}\n"
     | VariableDeclaration vds ->
         let pp_vd (ids, tso, eso) =
-            pp_idlist ids; p " "; ifsome tso pp_ts; p " "; ifsome eso pp_explist; pln "" in
-        match vds with
-        | []   -> p "var ( )\n"
+            pp_idlist ids; p " "; ifsome tso pp_ts; p " "; ifsome eso pp_explist; p "\n" in
+        (match vds with
+        | []   -> () (* remove empty variable declarations *)
         | [vd] -> p "var "; pp_vd vd
-        | vds  -> p "var (\n"; List.iter pp_vd vds; p ")\n"
+        | vds  -> p "var (\n"; List.iter pp_vd vds; p ")\n")
     | TypeDeclaration tds ->
-        let pp_td (id, ts) = pp_id id; p " "; pp_ts ts; pln "" in
-        match tds with
-        | []   -> p "type ( )\n"
+        let pp_td (id, ts) = pp_id id; p " "; pp_ts ts; p "\n" in
+        (match tds with
+        | []   -> () (* remove empty type declarations *)
         | [td] -> p "type "; pp_td td
-        | tds  -> p "type (\n"; List.iter pp_td tds; p ")\n"
+        | tds  -> p "type (\n"; List.iter pp_td tds; p ")\n")
 
 (* identifier *)
-and pp_id (Identifier s) =
-    p s
+and pp_id (Identifier str) =
+    p str
 
 (* statement *)
 and pp_stmt stmt =
     match stmt with
-    | ExpressionStatement e               -> pp_exp e; pln ""
-    | AssignmentStatement (es1, aop, es2) -> pp_explist es1; pp_aop aop; pp_explist es2; pln ""
+    | ExpressionStatement e               -> pp_exp e; p "\n"
+    | AssignmentStatement (es1, aop, es2) -> pp_explist es1; pp_aop aop; pp_explist es2; p "\n"
     | DeclarationStatement decl           -> pp_decl decl
-    | ShortValDeclaration (ids, es)       -> pp_idlist ids; p " := "; pp_explist es; pln ""
-    | Inc e                               -> pp_exp e; p "++"; pln ""
-    | Dec e                               -> pp_exp e; p "--"; pln ""
-    | PrintStatement es                   -> p "print("; pp_explist es; pln ")"
-    | PrintlnStatement es                 -> p "println("; pp_explist es; pln ")"
-    | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; pln ""
+    | ShortValDeclaration (ids, es)       -> pp_idlist ids; p " := "; pp_explist es; p "\n"
+    | Inc e                               -> pp_exp e; p "++"; p "\n"
+    | Dec e                               -> pp_exp e; p "--"; p "\n"
+    | PrintStatement es                   -> p "print("; pp_explist es; p ")\n"
+    | PrintlnStatement es                 -> p "println("; pp_explist es; p ")\n"
+    | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; p "\n"
     | IfStatement ifs                     -> pp_ifs ifs
     | SwitchStatement (so, eo, scs)       ->
     | ForStatement (so, eo, so, ss)       ->
-    | Break                               -> pln "break"
-    | Continue                            -> pln "continue"
+    | Break                               -> p "break\n"
+    | Continue                            -> p "continue\n"
 
 
 (* assignment operator *)
@@ -114,7 +114,7 @@ and pp_exp exp =
     | Uminus (e)                   -> p " - "; pp_exp e
     | Not (e)                      -> p " ! "; pp_exp e
     | Uxor (e)                     -> p " ^ "; pp_exp e
-    | FunctionCall (s, es)         -> printf "%s(" s; pp_explist es; p ")"
+    | FunctionCall (str, es)       -> printf "%s(" str; pp_explist es; p ")"
     | Append (e1, e2)              -> p "append("; pp_explist [e1;e2]; p ")"
     | Len (e)                      -> p "len("; pp_exp e; p ")"
     | Cap (e)                      -> p "cap("; pp_exp e; p ")"
@@ -122,27 +122,26 @@ and pp_exp exp =
     | LitInt (i)                   -> print_int i
     | LitFloat (f)                 -> print_float f
     | LitBool (b)                  -> printf "%B" b; ()
-    | LitRune (s)                  -> p s
-    | LitString (s)                -> p s
+    | LitRune (str)                -> p str
+    | LitString (str)              -> p str
     | IdentifierExpression (idexp) -> pp_idexp idexp
 
 and pp_idexp idexp =
     match idexp with
-    | Ident (s)                -> p s
-    | Blankid                  -> p "_"
-    | Indexed (s, e)           -> printf "%s[" s; pp_exp e; p "]"
-    | StructAccess (s, idexp)  -> printf "%s." s; pp_idexp idexp
+    | Ident (str)                -> p str
+    | Blankid                    -> p "_"
+    | Indexed (str, e)           -> printf "%s[" str; pp_exp e; p "]"
+    | StructAccess (str, idexp)  -> printf "%s." str; pp_idexp idexp
 
 (* helpers *)
 
 and p = print_string
-and pln = print_endline
-and pp_explist es =
-    let f = (fun i e -> pp_exp e; if i != (List.length es)-1 then p ", " else ()) in
-    List.iteri f es
-and pp_idlist ids =
-    let f = (fun i id -> pp_id id; if i != (List.length ids)-1 then p ", " else ()) in
-    List.iteri f ids
+
+and pp_explist es = pp_comma_separated_xs es pp_exp
+and pp_idlist ids = pp_comma_separated_xs ids pp_id
+and pp_comma_separated_xs xs pp_x =
+    let f = (fun i x -> pp_x x; if i != (List.length xs)-1 then p ", " else ()) in
+    List.iteri pp_x xs
 
 and ifsome o f =
     match o with
