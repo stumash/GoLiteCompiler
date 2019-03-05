@@ -4,10 +4,11 @@ open Printf
 (* pp - Pretty Print *)
 let rec pp_prog prog =
     match prog with
-    | _ -> p "let's get this shit started!"
+    | Program (pkg, ds) -> pp_pkg pkg; List.iter pp_decl ds
+    | EmptyProgram      -> p ""
 
 (* package *)
-and pp_package (Package str) =
+and pp_pkg (Package str) =
     printf "package %s\n" str
 
 (* declaration *)
@@ -51,7 +52,7 @@ and pp_stmt stmt ?(nl=true) =
     | PrintlnStatement es                 -> p "println("; pp_explist es; p ")\n"
     | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; p "\n"
     | IfStatement ifs                     -> pp_ifs ifs
-    | SwitchStatement (so, eo, scs)       -> p "switch "; ifsome so pp_stmt; 
+    | SwitchStatement _ as sw             -> pp_sw sw
     | ForStatement _ as fs                -> pp_for fs
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
@@ -60,18 +61,18 @@ and pp_stmt stmt ?(nl=true) =
 (* assignment operator *)
 and pp_aop aop =
     match aop with
-    | ASG -> p " = "
-    | PLUSEQ -> p " += "
+    | ASG     -> p " = "
+    | PLUSEQ  -> p " += "
     | MINUSEQ -> p " -= "
-    | MULTEQ -> p " *= "
-    | DIVEQ -> p " /= "
-    | MODEQ -> p " %= "
-    | BANDEQ -> p " &= "
-    | BOREQ -> p " |= "
-    | XOREQ -> p " ^= "
+    | MULTEQ  -> p " *= "
+    | DIVEQ   -> p " /= "
+    | MODEQ   -> p " %= "
+    | BANDEQ  -> p " &= "
+    | BOREQ   -> p " |= "
+    | XOREQ   -> p " ^= "
     | LSHFTEQ -> p " <<= "
     | RSHFTEQ -> p " >>= "
-    | NANDEQ -> p " &^= "
+    | NANDEQ  -> p " &^= "
 
 (* if statement *)
 and pp_ifs If (so, e, ss, elso) =
@@ -86,14 +87,19 @@ and pp_ifs If (so, e, ss, elso) =
 and pp_els els = 
     match els with
     | Elseif ifs -> p "else "; pp_ifs ifs
-    | Else ss -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
+    | Else ss    -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
+
+(* switch statemtent *)
+and pp_sw SwitchStatement (so, eo, scs) =
+    p "switch "; ifsome so (pp_stmt ~nl:false); ifp (so!=None) "; "; ifsome eo pp_exp; p " {\n";
+    List.iter pp_sc scs;
+    p "}\n"
 
 (* switch clause *)
 and pp_sc sc =
-    (* TODO *)
     match sc with
-    | Default ss -> ()
-    | Case (es, ss) -> ()
+    | Default ss    -> p "default {\n"; List.iter pp_stmt ss; p "}\n"
+    | Case (es, ss) -> p "case "; pp_explist es; p " {\n"; List.iter pp_stmt ss; p "}\n"
 
 pp_for ForStatement (so, eo, so, ss) =
     p "for ";
@@ -161,5 +167,5 @@ and pp_comma_separated_xs xs pp_x =
 and ifsome o f =
     match o with
     | Some a -> f a
-    | _ -> ()
+    | _      -> ()
 
