@@ -36,20 +36,23 @@ and pp_id (Identifier str) =
     p str
 
 (* statement *)
-and pp_stmt stmt =
+(* bool nl: if true print trailing newline in 'simple statements' *)
+and pp_stmt stmt ?(nl=true) =
     match stmt with
-    | ExpressionStatement e               -> pp_exp e; p "\n"
-    | AssignmentStatement (es1, aop, es2) -> pp_explist es1; pp_aop aop; pp_explist es2; p "\n"
+    (* simple statements *)
+    | ExpressionStatement e               -> pp_exp e; ifp nl "\n"
+    | AssignmentStatement (es1, aop, es2) -> pp_explist es1; pp_aop aop; pp_explist es2; ifp nl "\n"
+    | ShortValDeclaration (ids, es)       -> pp_idlist ids; p " := "; pp_explist es; ifp nl "\n"
+    | Inc e                               -> pp_exp e; p "++"; ifp nl "\n"
+    | Dec e                               -> pp_exp e; p "--"; ifp nl "\n"
+    (* all other statements *)
     | DeclarationStatement decl           -> pp_decl decl
-    | ShortValDeclaration (ids, es)       -> pp_idlist ids; p " := "; pp_explist es; p "\n"
-    | Inc e                               -> pp_exp e; p "++"; p "\n"
-    | Dec e                               -> pp_exp e; p "--"; p "\n"
     | PrintStatement es                   -> p "print("; pp_explist es; p ")\n"
     | PrintlnStatement es                 -> p "println("; pp_explist es; p ")\n"
     | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; p "\n"
     | IfStatement ifs                     -> pp_ifs ifs
-    | SwitchStatement (so, eo, scs)       ->
-    | ForStatement (so, eo, so, ss)       ->
+    | SwitchStatement (so, eo, scs)       -> p "switch "; ifsome so pp_stmt; 
+    | ForStatement _ as fs                -> pp_for fs
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
 
@@ -87,6 +90,13 @@ and pp_sc sc =
     match sc with
     | Default ss -> ()
     | Case (es, ss) -> ()
+
+pp_for ForStatement (so, eo, so, ss) =
+    p "for ";
+    ifsome so (pp_stmt ~nl:false); p "; "; ifsome eo pp_exp; p "; "; ifsome so (pp_stmt ~nl:false);
+    p " {\n";
+    List.iter pp_stmt ss;
+    p "}\n"
 
 (* expression *)
 and pp_exp exp =
@@ -136,6 +146,7 @@ and pp_idexp idexp =
 (* helpers *)
 
 and p = print_string
+and ifp b str = if b then p str else ()
 
 and pp_explist es = pp_comma_separated_xs es pp_exp
 and pp_idlist ids = pp_comma_separated_xs ids pp_id
@@ -147,3 +158,4 @@ and ifsome o f =
     match o with
     | Some a -> f a
     | _ -> ()
+
