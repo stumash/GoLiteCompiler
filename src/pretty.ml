@@ -85,8 +85,8 @@ and pp_ifs If (so, e, ss, elso) =
 (* else statement *)
 and pp_els els = 
     match els with
-    | Elseif ifs -> ()
-    | Else ss -> ()
+    | Elseif ifs -> p "else "; pp_ifs ifs
+    | Else ss -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
 
 (* switch clause *)
 and pp_sc sc =
