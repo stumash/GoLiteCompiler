@@ -74,12 +74,16 @@ and pp_aop aop =
     | NANDEQ -> p " &^= "
 
 (* if statement *)
-and pp_ifs (If (so, e, ss, elso)) =
-    () (* TODO *)
+and pp_ifs If (so, e, ss, elso) =
+    p "if "; ifsome so (pp_stmt ~nl:false); p "; "; pp_exp e; p " {\n";
+    List.iter pp_stmt ss;
+    p "}";
+    match elso with
+    | None     -> p "\n"
+    | Some els -> p " "; pp_els els
 
 (* else statement *)
 and pp_els els = 
-    (* TODO *)
     match els with
     | Elseif ifs -> ()
     | Else ss -> ()
