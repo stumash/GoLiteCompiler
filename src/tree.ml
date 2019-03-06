@@ -1,15 +1,15 @@
 (* Abstract Syntax Tree definition *)
 
 type prog =
-  | Program of package * (declaration list)
+  | Program of package * declaration list
   | EmptyProgram
 
 and package =
   | Package of string
 
 and declaration =
-  | FunctionDeclaration of identifier * parameters * type_spec option * (statement list)
-  | VariableDeclaration of (identifier list * type_spec option * (expression list option)) list
+  | FunctionDeclaration of identifier * parameters * type_spec option * statement list
+  | VariableDeclaration of (identifier list * type_spec option * expression list option) list
   | TypeDeclaration of (identifier * type_spec) list
 
 and identifier =
@@ -26,30 +26,30 @@ and parameters =
 
 and statement =
   | ExpressionStatement of expression
-  | AssignmentStatement of (expression list) * assignment_operator * (expression list)
+  | AssignmentStatement of expression list * assignment_operator * expression list
   | DeclarationStatement of declaration
-  | ShortValDeclaration of (identifier list) * (expression list)
+  | ShortValDeclaration of identifier list * expression list
   | Inc of expression
   | Dec of expression
   | PrintStatement of expression list
   | PrintlnStatement of expression list
   | ReturnStatement of expression option
   | IfStatement of if_statement
-  | SwitchStatement of (statement option) * (expression option) * (switch_clause list)
-  | ForStatement of (statement option) * (expression option) * (statement option) * (statement list)
+  | SwitchStatement of statement option * expression option * switch_clause list
+  | ForStatement of statement option * expression option * statement option * statement list
   | Break
   | Continue
 
 and if_statement =
-  | If of (statement option) * expression * (statement list) * (else_statement option)
+  | If of statement option * expression * statement list * else_statement option
 
 and else_statement =
   | Elseif of if_statement
-  | Else of (statement list)
+  | Else of statement list
 
 and switch_clause =
   | Default of statement list
-  | Case of (expression list) * (statement list)
+  | Case of expression list * statement list
 
 and assignment_operator =
   | ASG
@@ -92,7 +92,7 @@ and expression =
   | Not of expression
   | Uxor of expression
 (* function calls *)
-  | FunctionCall of string  * (expression list)
+  | FunctionCall of string  * expression list
   | Append of expression * expression
   | Len of expression
   | Cap of expression
