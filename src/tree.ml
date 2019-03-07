@@ -116,6 +116,8 @@ and identifier_expression =
 
 let is_simple_stmt stmt =
     match stmt with
-    | ExpressionStatement _ | Inc _ | Dec _ -> true
-    | AssignmentStatement _ | ShortValDeclaration _  -> true
-    | _ -> false
+    | ExpressionStatement _ -> true
+    | ShortValDeclaration _ -> true
+    | AssignmentStatement _ -> true
+    | Inc _ | Dec _         -> true
+    | _                     -> false

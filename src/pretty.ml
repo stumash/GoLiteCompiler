@@ -90,7 +90,7 @@ and pp_aop aop =
     | NANDEQ  -> p " &^= "
 
 (* if statement *)
-and pp_ifs If (so, e, ss, elso) =
+and pp_ifs (If (so, e, ss, elso)) =
     p "if "; ifsome so (pp_stmt ~nl:false); p "; "; pp_exp e; p " {\n";
     List.iter pp_stmt ss;
     p "}";
@@ -105,7 +105,7 @@ and pp_els els =
     | Else ss    -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
 
 (* switch statemtent *)
-and pp_sw SwitchStatement (so, eo, scs) =
+and pp_sw (SwitchStatement (so, eo, scs)) =
     p "switch "; ifsome so (fun s -> pp_stmt ~nl:false s; p "; "); ifsome eo pp_exp; p " {\n";
     List.iter pp_sc scs;
     p "}\n"
@@ -116,7 +116,7 @@ and pp_sc sc =
     | Default ss    -> p "default {\n"; List.iter pp_stmt ss; p "}\n"
     | Case (es, ss) -> p "case "; pp_explist es; p " {\n"; List.iter pp_stmt ss; p "}\n"
 
-and pp_for ForStatement (so, eo, so, ss) =
+and pp_for (ForStatement (so, eo, so, ss)) =
     p "for ";
     ifsome so (pp_stmt ~nl:false); p "; "; ifsome eo pp_exp; p "; "; ifsome so (pp_stmt ~nl:false);
     p " {\n";
