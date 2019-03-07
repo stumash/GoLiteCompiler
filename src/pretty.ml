@@ -14,13 +14,14 @@ and pp_pkg (Package str) =
 (* declaration *)
 and pp_decl decl =
     match decl with
-    | FunctionDeclaration (id, params, tso, ss) ->
-        pp_id id; p "("; pp_params params; p ") "; ifsome tso pp_ts; p " {\n";
+    | FunctionDeclaration (id, prms, tso, ss) ->
+        pp_id id; p "("; pp_prms prms; p ") "; ifsome tso pp_ts; p " {\n";
         List.iter pp_stmt ss;
         p "}\n"
     | VariableDeclaration vds ->
         let pp_vd (ids, tso, eso) =
-            pp_idlist ids; p " "; ifsome tso pp_ts; p " "; ifsome eso pp_explist; p "\n" in
+            pp_idlist ids; p " "; ifsome tso pp_ts;
+            ifsome eso (fun es -> p " = "; pp_explist es); p "\n" in
         (match vds with
         | []   -> () (* remove empty variable declarations *)
         | [vd] -> p "var "; pp_vd vd
@@ -36,9 +37,24 @@ and pp_decl decl =
 and pp_id (Identifier str) =
     p str
 
+(* type_spec *)
+and pp_ts ts =
+    match ts with
+    | IdentifierType (Identifier str) -> p str
+    | ArrayTypeLiteral (e, ts)        -> p "["; pp_exp e; p "]"; pp_ts ts
+    | StructTypeLiteral prms          -> p "{\n"; List.iter (fun prm -> pp_prm prm; p "\n") prms; p "}\n"
+    | SliceTypeLiteral ts             -> p "[]"; pp_ts ts
+
+(* function paramters *)
+and pp_prms prms =
+    pp_comma_separated_xs prms pp_prm
+
+and pp_prm (ids, ts) =
+    pp_idlist ids; p " "; pp_ts ts
+
 (* statement *)
 (* bool nl: if true print trailing newline in 'simple statements' *)
-and pp_stmt stmt ?(nl=true) =
+and pp_stmt ?(nl=true) stmt =
     match stmt with
     (* simple statements *)
     | ExpressionStatement e               -> pp_exp e; ifp nl "\n"
@@ -56,7 +72,6 @@ and pp_stmt stmt ?(nl=true) =
     | ForStatement _ as fs                -> pp_for fs
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
-
 
 (* assignment operator *)
 and pp_aop aop =
@@ -84,14 +99,14 @@ and pp_ifs If (so, e, ss, elso) =
     | Some els -> p " "; pp_els els
 
 (* else statement *)
-and pp_els els = 
+and pp_els els =
     match els with
     | Elseif ifs -> p "else "; pp_ifs ifs
     | Else ss    -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
 
 (* switch statemtent *)
 and pp_sw SwitchStatement (so, eo, scs) =
-    p "switch "; ifsome so (pp_stmt ~nl:false); ifp (so!=None) "; "; ifsome eo pp_exp; p " {\n";
+    p "switch "; ifsome so (fun s -> pp_stmt ~nl:false s; p "; "); ifsome eo pp_exp; p " {\n";
     List.iter pp_sc scs;
     p "}\n"
 
@@ -101,7 +116,7 @@ and pp_sc sc =
     | Default ss    -> p "default {\n"; List.iter pp_stmt ss; p "}\n"
     | Case (es, ss) -> p "case "; pp_explist es; p " {\n"; List.iter pp_stmt ss; p "}\n"
 
-pp_for ForStatement (so, eo, so, ss) =
+and pp_for ForStatement (so, eo, so, ss) =
     p "for ";
     ifsome so (pp_stmt ~nl:false); p "; "; ifsome eo pp_exp; p "; "; ifsome so (pp_stmt ~nl:false);
     p " {\n";
@@ -148,24 +163,23 @@ and pp_exp exp =
 
 and pp_idexp idexp =
     match idexp with
-    | Ident (str)                -> p str
-    | Blankid                    -> p "_"
-    | Indexed (str, e)           -> printf "%s[" str; pp_exp e; p "]"
-    | StructAccess (str, idexp)  -> printf "%s." str; pp_idexp idexp
+    | Ident (str)               -> p str
+    | Blankid                   -> p "_"
+    | Indexed (str, e)          -> printf "%s[" str; pp_exp e; p "]"
+    | StructAccess (str, idexp) -> printf "%s." str; pp_idexp idexp
 
 (* helpers *)
 
-and p = print_string
+and p str = print_string str
 and ifp b str = if b then p str else ()
 
 and pp_explist es = pp_comma_separated_xs es pp_exp
 and pp_idlist ids = pp_comma_separated_xs ids pp_id
 and pp_comma_separated_xs xs pp_x =
-    let f = (fun i x -> pp_x x; if i != (List.length xs)-1 then p ", " else ()) in
-    List.iteri pp_x xs
+    let f i x = pp_x x; if i != (List.length xs)-1 then p ", " else () in
+    List.iteri f xs
 
 and ifsome o f =
     match o with
     | Some a -> f a
     | _      -> ()
-
