@@ -14,20 +14,20 @@ and pp_pkg (Package str) =
 (* declaration *)
 and pp_decl decl =
     match decl with
-    | FunctionDeclaration (id, prms, tso, ss) ->
-        pp_id id; p "("; pp_prms prms; p ") "; ifsome tso pp_ts; p " {\n";
+    | FunctionDeclaration (id, prms, tpo, ss) ->
+        pp_id id; p "("; pp_prms prms; p ") "; ifsome tpo pp_tp; p " {\n";
         List.iter pp_stmt ss;
         p "}\n"
     | VariableDeclaration vds ->
-        let pp_vd (ids, tso, eso) =
-            pp_idlist ids; p " "; ifsome tso pp_ts;
+        let pp_vd (ids, tpo, eso) =
+            pp_idlist ids; p " "; ifsome tpo pp_tp;
             ifsome eso (fun es -> p " = "; pp_explist es); p "\n" in
         (match vds with
         | []   -> () (* remove empty variable declarations *)
         | [vd] -> p "var "; pp_vd vd
         | vds  -> p "var (\n"; List.iter pp_vd vds; p ")\n")
     | TypeDeclaration tds ->
-        let pp_td (id, ts) = pp_id id; p " "; pp_ts ts; p "\n" in
+        let pp_td (id, tp) = pp_id id; p " "; pp_tp tp; p "\n" in
         (match tds with
         | []   -> () (* remove empty type declarations *)
         | [td] -> p "type "; pp_td td
@@ -38,22 +38,22 @@ and pp_id (Identifier str) =
     p str
 
 (* type_spec *)
-and pp_ts ts =
-    match ts with
+and pp_tp tp =
+    match tp with
     | IdentifierType (Identifier str) -> p str
-    | ArrayTypeLiteral (e, ts)        -> p "["; pp_exp e; p "]"; pp_ts ts
+    | ArrayTypeLiteral (e, tp)        -> p "["; pp_exp e; p "]"; pp_tp tp
     | StructTypeLiteral prms          -> p "{\n"; List.iter (fun prm -> pp_prm prm; p "\n") prms; p "}\n"
-    | SliceTypeLiteral ts             -> p "[]"; pp_ts ts
+    | SliceTypeLiteral tp             -> p "[]"; pp_tp tp
 
 (* function paramters *)
 and pp_prms prms =
     pp_comma_separated_xs prms pp_prm
 
-and pp_prm (ids, ts) =
-    pp_idlist ids; p " "; pp_ts ts
+and pp_prm (ids, tp) =
+    pp_idlist ids; p " "; pp_tp tp
 
 (* statement *)
-(* bool nl: if true print trailing newline in 'simple statements' *)
+(* bool nl: if true print trailing newline in 'simple statementp' *)
 and pp_stmt ?(nl=true) stmt =
     match stmt with
     (* simple statements *)
