@@ -7,7 +7,7 @@
     (* expression list to identifier list *)
     let es_to_ids es =
         let e_to_id = function
-            | IdentifierExpression (Ident s) -> Identifier s
+            | IdentifierExpression (Ident str) -> Identifier str
             | _ -> raise ExpressionIsNotIdentifier in
         List.map e_to_id es
 
