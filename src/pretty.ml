@@ -1,5 +1,6 @@
 open Tree
 open Printf
+open Utils
 
 (* pp - Pretty Print *)
 let rec pp_prog prog =
@@ -19,7 +20,7 @@ and pp_decl decl =
         List.iter pp_stmt ss;
         p "}\n"
     | VariableDeclaration vds ->
-        let pp_vd (ids, tpo, eso) =
+        let pp_vd (ids, tpo, (eso: expression list option)) =
             pp_idlist ids; p " "; ifsome tpo pp_tp;
             ifsome eso (fun es -> p " = "; pp_explist es); p "\n" in
         (match vds with
@@ -178,8 +179,3 @@ and pp_idlist ids = pp_comma_separated_xs ids pp_id
 and pp_comma_separated_xs xs pp_x =
     let f i x = pp_x x; if i != (List.length xs)-1 then p ", " else () in
     List.iteri f xs
-
-and ifsome o f =
-    match o with
-    | Some a -> f a
-    | _      -> ()

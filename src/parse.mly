@@ -323,9 +323,9 @@ if_statement :
     | IF e=exp LCURLY ss=statement_block RCURLY en=endif { If (None, e, ss, en) }
     ;
 endif :
-    | ELSE ifs=if_statement { Some (Elseif ifs) }
+    | ELSE ifs=if_statement                 { Some (Elseif ifs) }
     | ELSE LCURLY ss=statement_block RCURLY { Some (Else ss) }
-    | { None }
+    |                                       { None }
     ;
 
 switch_statement :
@@ -337,17 +337,17 @@ expr_case_clause :
     | esc=expr_switch_case COLON ss=statements
       {
           match esc with
-          | None -> Default ss
+          | None    -> Default ss
           | Some es -> Case (es, ss)
       }
     ;
 expr_switch_case :
-    | DEFAULT { None }
+    | DEFAULT                 { None }
     | CASE es=expression_list { Some es }
     ;
 
 identifier_list :
-    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun s -> Identifier s) ids }
+    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun str -> Identifier str) ids }
     ;
 
 expression_list :
@@ -383,20 +383,20 @@ exp :
     ;
 (* 'keyword functions' *)
 exp_other :
-    | e1=IDENT LPAREN e2=expression_list RPAREN { FunctionCall (e1, e2) } (*function calls *)
-    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN  { Append (e1, e2) } (* Append *)
-    | LEN LPAREN e=exp RPAREN                   { Len e } (* array/slice length *)
-    | CAP LPAREN e=exp RPAREN                   { Cap e } (* array/slice capacity *)
-    | LPAREN e=exp RPAREN                       { ParenExpression e } (* '(' exp ')' *)
-    | e=operand                                 { e }
+    | str=IDENT LPAREN es=expression_list RPAREN { FunctionCall (str, es) } (*function calls *)
+    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN   { Append (e1, e2) } (* Append *)
+    | LEN LPAREN e=exp RPAREN                    { Len e } (* array/slice length *)
+    | CAP LPAREN e=exp RPAREN                    { Cap e } (* array/slice capacity *)
+    | LPAREN e=exp RPAREN                        { ParenExpression e } (* '(' exp ')' *)
+    | e=operand                                  { e }
     ;
 
 (* identifiers and rvalues *)
 operand :
-    | e=ident_type { IdentifierExpression e }
-    | e=LIT_INT    { LitInt e }
-    | e=LIT_BOOL   { LitBool e }
-    | e=LIT_FLOAT  { LitFloat e }
-    | e=LIT_RUNE   { LitRune e }
-    | e=LIT_STRING { LitString e }
+    | e=ident_type   { IdentifierExpression e }
+    | i=LIT_INT      { LitInt i }
+    | b=LIT_BOOL     { LitBool b }
+    | f=LIT_FLOAT    { LitFloat f }
+    | str=LIT_RUNE   { LitRune str }
+    | str=LIT_STRING { LitString str }
     ;
