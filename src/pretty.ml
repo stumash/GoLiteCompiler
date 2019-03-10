@@ -1,6 +1,6 @@
 open Tree
 open Printf
-open Utils
+open Helpers
 
 (* pp - Pretty Print *)
 let rec pp_prog prog =
@@ -20,7 +20,7 @@ and pp_decl decl =
         List.iter pp_stmt ss;
         p "}\n"
     | VariableDeclaration vds ->
-        let pp_vd (ids, tpo, (eso: expression list option)) =
+        let pp_vd (ids, tpo, eso) =
             pp_idlist ids; p " "; ifsome tpo pp_tp;
             ifsome eso (fun es -> p " = "; pp_explist es); p "\n" in
         (match vds with
@@ -47,7 +47,7 @@ and pp_tp tp =
     | SliceTypeLiteral tp             -> p "[]"; pp_tp tp
 
 (* function paramters *)
-and pp_prms prms =
+and pp_prms (Parameters prms) =
     pp_comma_separated_xs prms pp_prm
 
 and pp_prm (ids, tp) =
@@ -69,8 +69,8 @@ and pp_stmt ?(nl=true) stmt =
     | PrintlnStatement es                 -> p "println("; pp_explist es; p ")\n"
     | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; p "\n"
     | IfStatement ifs                     -> pp_ifs ifs
-    | SwitchStatement _ as sw             -> pp_sw sw
-    | ForStatement _ as fs                -> pp_for fs
+    | SwitchStatement (so, eo, scl)       -> pp_sw (so, eo, scl)
+    | ForStatement (so1, eo, so2, ss)     -> pp_for (so1, eo, so2, ss)
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
 
@@ -106,7 +106,7 @@ and pp_els els =
     | Else ss    -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
 
 (* switch statemtent *)
-and pp_sw (SwitchStatement (so, eo, scs)) =
+and pp_sw (so, eo, scs) =
     p "switch "; ifsome so (fun s -> pp_stmt ~nl:false s; p "; "); ifsome eo pp_exp; p " {\n";
     List.iter pp_sc scs;
     p "}\n"
@@ -117,9 +117,9 @@ and pp_sc sc =
     | Default ss    -> p "default {\n"; List.iter pp_stmt ss; p "}\n"
     | Case (es, ss) -> p "case "; pp_explist es; p " {\n"; List.iter pp_stmt ss; p "}\n"
 
-and pp_for (ForStatement (so, eo, so, ss)) =
+and pp_for (so1, eo, so2, ss) =
     p "for ";
-    ifsome so (pp_stmt ~nl:false); p "; "; ifsome eo pp_exp; p "; "; ifsome so (pp_stmt ~nl:false);
+    ifsome so1 (pp_stmt ~nl:false); p "; "; ifsome eo pp_exp; p "; "; ifsome so2 (pp_stmt ~nl:false);
     p " {\n";
     List.iter pp_stmt ss;
     p "}\n"
@@ -176,6 +176,3 @@ and ifp b str = if b then p str else ()
 
 and pp_explist es = pp_comma_separated_xs es pp_exp
 and pp_idlist ids = pp_comma_separated_xs ids pp_id
-and pp_comma_separated_xs xs pp_x =
-    let f i x = pp_x x; if i != (List.length xs)-1 then p ", " else () in
-    List.iteri f xs
