@@ -51,6 +51,15 @@
     (* String of Go Boolean to Boolean *)
     (* Go boolean syntax is compatible with OCaml boolean syntax *)
     let sgb2b = bool_of_string
+
+    (* ocamllex only manages pos_cnum automatically, need to do pos_lnum and pos_bol manually *)
+    let incr_linenum lexbuf =
+        let pos = lexbuf.Lexing.lex_curr_p in
+        lexbuf.Lexing.lex_curr_p <- {
+            pos with
+            Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
+            Lexing.pos_bol = pos.Lexing.pos_cnum
+        }
 }
 
 
@@ -176,7 +185,8 @@ rule scanner = parse
   | lit_rune as s         { mpt "lit_rune(%s)\n" s;   slt (LIT_RUNE s) }
 (* special *)
   | [' ' '\t']            { scanner lexbuf }
-  | '\n'                  { if is_stmt_end !last_token then
+  | '\n'                  { incr_linenum lexbuf;
+                            if is_stmt_end !last_token then
                               ( mpt "%s\n" ";" ; slt SEMICOLON )
                             else scanner lexbuf
                           }
