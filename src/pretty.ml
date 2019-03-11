@@ -113,6 +113,7 @@ and pp_sw (so, eo, scs) =
 
 (* switch clause *)
 and pp_sc sc =
+    (* TODO *)
     match sc with
     | Default ss    -> p "default {\n"; List.iter pp_stmt ss; p "}\n"
     | Case (es, ss) -> p "case "; pp_explist es; p " {\n"; List.iter pp_stmt ss; p "}\n"
