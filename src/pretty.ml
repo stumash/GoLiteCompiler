@@ -1,8 +1,23 @@
 open Tree
 open Printf
-open Helpers
 
-(* pp - Pretty Print *)
+(* local helpers *)
+
+(* pretty print a list of xs, comma-separated, using a given pretty printer for type x *)
+let pp_comma_separated_xs xs pp_x =
+    let f i x = pp_x x; if i != (List.length xs)-1 then print_string ", " else () in
+    List.iteri f xs
+
+let ifsome o f =
+    match o with
+    | Some a -> f a
+    | _      -> ()
+
+(*-----------------------------------*
+ * pp - Pretty Print
+ *-----------------------------------*)
+
+(* program *)
 let rec pp_prog prog =
     match prog with
     | Program (pkg, ds) -> pp_pkg pkg; List.iter pp_decl ds
