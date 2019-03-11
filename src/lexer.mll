@@ -90,6 +90,7 @@ let lit_bool = "true" | "false"
 let escape_char = "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v" | "\\\\"
 let lit_rune = '\'' ([^ '\t' '\n' '\'' '\\'] | escape_char | "\\'" ) '\''
 let lit_string = '"' ([^ '`' '\\' '"'] | escape_char | "\\\"")* '"'
+let lit_raw_string = '`' ([^ '`'] | escape_char | "\\\`")* '`'
 
 
 (* lexer *)
@@ -182,6 +183,7 @@ rule scanner = parse
   | lit_float as s        { mpt "lit_float(%s)\n" s;  slt (LIT_FLOAT (sgf2f s)) }
   | lit_bool as s         { mpt "lit_bool(%s)\n" s;   slt (LIT_BOOL (sgb2b s)) }
   | lit_string as s       { mpt "lit_string(%s)\n" s; slt (LIT_STRING s) }
+  | lit_raw_string as s   { mpt "lit_raw_string(%s)\n" s; slt (LIT_RAW_STRING s)}
   | lit_rune as s         { mpt "lit_rune(%s)\n" s;   slt (LIT_RUNE s) }
 (* special *)
   | [' ' '\t']            { scanner lexbuf }

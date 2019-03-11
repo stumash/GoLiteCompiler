@@ -5,5 +5,5 @@ let _ =
         while Lexer.scanner lexbuf != Parse.EOF do
             ()
         done;
-        print_endline "\ntokenizer completed successfully"
+        print_endline "OK: tokenizer completed successfully"
     with Lexer.Error -> Helpers.print_error lexbuf "Scanner"

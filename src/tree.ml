@@ -103,6 +103,7 @@ and expression =
   | LitFloat of float
   | LitRune of string
   | LitString of string
+  | LitRawString of string
   | IdentifierExpression of identifier_expression
 
 and identifier_expression =

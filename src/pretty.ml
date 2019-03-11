@@ -161,6 +161,7 @@ and pp_exp exp =
     | LitBool (b)                  -> printf "%B" b; ()
     | LitRune (str)                -> p str
     | LitString (str)              -> p str
+    | LitRawString (str)           -> p str
     | IdentifierExpression (idexp) -> pp_idexp idexp
 
 and pp_idexp idexp =

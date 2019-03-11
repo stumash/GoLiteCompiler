@@ -115,6 +115,7 @@
 %token <bool> LIT_BOOL
 %token <string> LIT_RUNE
 %token <string> LIT_STRING
+%token <string> LIT_RAW_STRING
 
 (* end-of-file, required *)
 %token EOF
@@ -393,10 +394,11 @@ exp_other :
 
 (* identifiers and rvalues *)
 operand :
-    | e=ident_type   { IdentifierExpression e }
-    | i=LIT_INT      { LitInt i }
-    | b=LIT_BOOL     { LitBool b }
-    | f=LIT_FLOAT    { LitFloat f }
-    | str=LIT_RUNE   { LitRune str }
-    | str=LIT_STRING { LitString str }
+    | e=ident_type       { IdentifierExpression e }
+    | i=LIT_INT          { LitInt i }
+    | b=LIT_BOOL         { LitBool b }
+    | f=LIT_FLOAT        { LitFloat f }
+    | str=LIT_RUNE       { LitRune str }
+    | str=LIT_STRING     { LitString str }
+    | str=LIT_RAW_STRING { LitRawString str}
     ;

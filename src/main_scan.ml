@@ -4,5 +4,5 @@ let _ =
         while Lexer.scanner lexbuf != Parse.EOF do
             ()
         done;
-        print_endline "\nscanner completed successfully"
+        print_endline "OK: scanner completed successfully"
     with Lexer.Error -> Helpers.print_error lexbuf "Scanner"
