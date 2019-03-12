@@ -230,8 +230,10 @@ ids_w_type :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN es=expression_list RPAREN   { PrintStatement es }
-    | PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement es }
+    | PRINT LPAREN es=expression_list RPAREN   { PrintStatement (Some es) }
+    | PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement (Some es) }
+    | PRINT LPAREN RPAREN {PrintStatement None}
+    | PRINTLN LPAREN RPAREN {PrintlnStatement None}
     ;
 
 (*For statements *)

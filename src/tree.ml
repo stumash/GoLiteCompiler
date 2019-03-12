@@ -31,8 +31,8 @@ and statement =
   | ShortValDeclaration of (identifier list) * (expression list)
   | Inc of expression
   | Dec of expression
-  | PrintStatement of expression list
-  | PrintlnStatement of expression list
+  | PrintStatement of (expression list option)
+  | PrintlnStatement of (expression list option)
   | ReturnStatement of expression option
   | IfStatement of if_statement
   | SwitchStatement of (statement option) * (expression option) * (switch_clause list)

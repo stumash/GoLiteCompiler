@@ -80,8 +80,10 @@ and pp_stmt ?(nl=true) stmt =
     | Dec e                               -> pp_exp e; p "--"; ifp nl "\n"
     (* all other statements *)
     | DeclarationStatement decl           -> pp_decl decl
-    | PrintStatement es                   -> p "print("; pp_explist es; p ")\n"
-    | PrintlnStatement es                 -> p "println("; pp_explist es; p ")\n"
+    | PrintStatement Some es              -> p "print("; pp_explist es; p ")\n"
+    | PrintlnStatement Some es            -> p "println("; pp_explist es; p ")\n"
+    | PrintStatement None                   -> p "print ()\n"
+    | PrintlnStatement None                -> p "println ()\n"
     | ReturnStatement eo                  -> p "return "; ifsome eo pp_exp; p "\n"
     | IfStatement ifs                     -> pp_ifs ifs
     | SwitchStatement (so, eo, scl)       -> pp_sw (so, eo, scl)
