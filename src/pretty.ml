@@ -90,6 +90,7 @@ and pp_stmt ?(nl=true) stmt =
     | ForStatement (so1, eo, so2, ss)     -> pp_for (so1, eo, so2, ss)
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
+    | EmptyStatement                      -> ifp nl "\n"
 
 (* assignment operator *)
 and pp_aop aop =
