@@ -39,7 +39,7 @@ and statement =
   | ForStatement of (statement option) * (expression option) * (statement option) * (statement list)
   | Break
   | Continue
-  | Empty 
+  | EmptyStatement
 
 and if_statement =
   | If of (statement option) * expression * (statement list) * (else_statement option)
