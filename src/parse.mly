@@ -243,16 +243,18 @@ for_loop :
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
-    | LCURLY ss=statements RCURLY { ForStatement (None, None, None, ss) }
-    | e=exp LCURLY ss=statements RCURLY { ForStatement (None, Some e, None, ss) }
     | s1=statement SEMICOLON e=exp SEMICOLON s2=statement LCURLY ss=statements RCURLY
       { ForStatement (Some s1, Some e, Some s2, ss) }
+    | LCURLY ss=statements RCURLY { ForStatement (None, None, None, ss) }
+    | e=exp LCURLY ss=statements RCURLY { ForStatement (None, Some e, None, ss) }
+   
     ;
 
 (* statements *)
 statements :
-    | s=statement SEMICOLON ss=statements (*SEMI*) { s::ss }
+    | s=statement ss=statements (*SEMI*) { s::ss }
     | { [] }
+    
     ;
 
 
@@ -279,18 +281,19 @@ asg_tok :
     ;
 
 statement :
-    | e=exp                   { ExpressionStatement e }
-    | s=assignment_statement  { s }
-    | d=block_declaration     { DeclarationStatement d }
-    | s=short_val_declaration { s }
-    | s=inc_dec_statement     { s }
-    | s=print_statement       { s }
-    | RETURN eo=option(exp)   { ReturnStatement eo }
-    | ifs=if_statement        { IfStatement ifs }
-    | s=switch_statement      { s }
-    | s=for_loop              { s }
-    | BREAK                   { Break }
-    | CONTINUE                { Continue }
+    | e=exp SEMICOLON                  { ExpressionStatement e }
+    | s=assignment_statement SEMICOLON { s }
+    | d=block_declaration  SEMICOLON   { DeclarationStatement d }
+    | s=short_val_declaration SEMICOLON { s }
+    | s=inc_dec_statement   SEMICOLON  { s }
+    | s=print_statement    SEMICOLON   { s }
+    | RETURN eo=option(exp)  SEMICOLON { ReturnStatement eo }
+    | ifs=if_statement      SEMICOLON  { IfStatement ifs }
+    | s=switch_statement    SEMICOLON  { s }
+    | s=for_loop            SEMICOLON  { s }
+    | BREAK                 SEMICOLON  { Break }
+    | CONTINUE              SEMICOLON  { Continue }
+    | SEMICOLON               { Empty }
     ;
 
 (* TODO uncomment and resolve *)
