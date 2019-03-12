@@ -62,7 +62,6 @@
         }
 }
 
-
 (* pattern definitions *)
 
 let digit = ['0'-'9']
@@ -88,9 +87,9 @@ let lit_float =  digits '.' digit* expon? | digit* '.' digits expon?
 let lit_bool = "true" | "false"
 
 let escape_char = "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v" | "\\\\"
-let lit_rune = '\'' ([^ '\t' '\n' '\'' '\\'] | escape_char | "\\'" ) '\''
-let lit_string = '"' ([^ '`' '\\' '"'] | escape_char | "\\\"")* '"'
-let lit_raw_string = '`' ([^ '`'] | escape_char | "\\\`")* '`'
+let lit_rune = '\'' ([^ '\t' '\n' '\'' '\\' '\n'] | escape_char | "\\'" ) '\''
+let lit_string = '"' ([^ '`' '\\' '"' '\n'] | escape_char | "\\\"")* '"'
+let lit_raw_string = '`' ([^ '`' '\n'] | escape_char | "\\\`")* '`'
 
 
 (* lexer *)

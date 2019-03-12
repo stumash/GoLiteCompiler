@@ -291,20 +291,16 @@ statement :
     | CONTINUE                { Continue }
     ;
 
-(* TODO uncomment and resolve *)
-(*simple_statement :*)
-    (*| exp SEMICOLON                   { }*)
-    (*| inc_dec_statement SEMICOLON     { }*)
-    (*| assignment_statement SEMICOLON  { }*)
-    (*| short_val_declaration SEMICOLON { }*)
-    (*;*)
-
 statement_block :
     | LCURLY ss=statements RCURLY { ss }
     ;
 
 assignment_statement :
-    | es1=expression_list at=asg_tok es2=expression_list { AssignmentStatement (es1, at, es2) }
+    | es1=expression_list at=asg_tok es2=expression_list
+      {
+          err_if_neq_len es1 es2 VarDecIdsLenNeqExpsLen;
+          AssignmentStatement (es1, at, es2)
+      }
     ;
 
 short_val_declaration :
