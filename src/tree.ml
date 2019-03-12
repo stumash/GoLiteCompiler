@@ -31,14 +31,15 @@ and statement =
   | ShortValDeclaration of (identifier list) * (expression list)
   | Inc of expression
   | Dec of expression
-  | PrintStatement of expression list
-  | PrintlnStatement of expression list
+  | PrintStatement of (expression list option)
+  | PrintlnStatement of (expression list option)
   | ReturnStatement of expression option
   | IfStatement of if_statement
   | SwitchStatement of (statement option) * (expression option) * (switch_clause list)
   | ForStatement of (statement option) * (expression option) * (statement option) * (statement list)
   | Break
   | Continue
+  | EmptyStatement
 
 and if_statement =
   | If of (statement option) * expression * (statement list) * (else_statement option)

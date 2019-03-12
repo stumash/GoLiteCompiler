@@ -230,8 +230,10 @@ ids_w_type :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN es=expression_list RPAREN   { PrintStatement es }
-    | PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement es }
+    | PRINT LPAREN es=expression_list RPAREN   { PrintStatement (Some es) }
+    | PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement (Some es) }
+    | PRINT LPAREN RPAREN {PrintStatement None}
+    | PRINTLN LPAREN RPAREN {PrintlnStatement None}
     ;
 
 (*For statements *)
@@ -241,16 +243,18 @@ for_loop :
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
-    | LCURLY ss=statements RCURLY { ForStatement (None, None, None, ss) }
-    | e=exp LCURLY ss=statements RCURLY { ForStatement (None, Some e, None, ss) }
     | s1=statement SEMICOLON e=exp SEMICOLON s2=statement LCURLY ss=statements RCURLY
       { ForStatement (Some s1, Some e, Some s2, ss) }
+    | LCURLY ss=statements RCURLY { ForStatement (None, None, None, ss) }
+    | e=exp LCURLY ss=statements RCURLY { ForStatement (None, Some e, None, ss) }
+   
     ;
 
 (* statements *)
 statements :
     | s=statement SEMICOLON ss=statements (*SEMI*) { s::ss }
     | { [] }
+    
     ;
 
 
@@ -289,6 +293,7 @@ statement :
     | s=for_loop              { s }
     | BREAK                   { Break }
     | CONTINUE                { Continue }
+    |                         { EmptyStatement }
     ;
 
 statement_block :
