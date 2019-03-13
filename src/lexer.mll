@@ -32,8 +32,6 @@
             | BREAK | CONTINUE | FALLTHROUGH | RETURN -> true
             | _                                       -> false
 
-    exception Error
-
     (* String of Go Int To Int *)
     (* sgi - String repr. of Go Int *)
     (* soi - String repr. of OCaml Int *)
@@ -200,7 +198,7 @@ rule scanner = parse
                             else
                               ( mpt "%s\n" "EOF"; EOF )
                           }
-  | _                     { raise Error }
+  | _                     { raise Helpers.LexerError }
 
 
 (*trailer

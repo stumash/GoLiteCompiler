@@ -6,4 +6,5 @@ let _ =
             ()
         done;
         print_endline "OK: tokenizer completed successfully"
-    with Lexer.Error -> Helpers.print_error lexbuf "Scanner"
+    with
+    | Helpers.LexerError -> Helpers.print_error lexbuf "Scanner"
