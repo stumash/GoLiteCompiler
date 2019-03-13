@@ -11,6 +11,7 @@ exception VarDecNeedsTypeOrInit
 exception VarDecIdsLenNeqExpsLen
 exception NotSimpleStatement
 exception MultAsgCannotShorthand
+exception SwitchMultipleDefaults
 
 let handle_error ?(default="Default") lb = function
     | ExpressionIsNotIdentifier -> print_error lb "Parser: exp is not ident"
@@ -18,5 +19,6 @@ let handle_error ?(default="Default") lb = function
     | VarDecNeedsTypeOrInit     -> print_error lb "Parser: var. decl. needs type or initializer"
     | NotSimpleStatement        -> print_error lb "Parser: statement is not a 'simple statement'"
     | MultAsgCannotShorthand    -> print_error lb "Parser: multiple assignment must use '='"
+    | SwitchMultipleDefaults    -> print_error lb "Parser: switch has multiple default cases"
     | LexerError                -> print_error lb "Scanner"
     | _                         -> print_error lb default

@@ -369,11 +369,18 @@ endif :
 switch_statement :
     | SWITCH eo=option(exp) LCURLY
           scl=list(expr_case_clause)
-      RCURLY { SwitchStatement (EmptyStatement, eo, scl) }
+      RCURLY
+      {
+          let f acc sc = match sc with | Default ss -> acc+1 | _ -> acc in
+          err_if (1 < List.fold_left f 0 scl) SwitchMultipleDefaults;
+          SwitchStatement (EmptyStatement, eo, scl)
+      }
     | SWITCH s=statement_ SEMICOLON eo=option(exp) LCURLY
           scl=list(expr_case_clause)
       RCURLY
       {
+          let f acc sc = match sc with | Default ss -> acc+1 | _ -> acc in
+          err_if (1 < List.fold_left f 0 scl) SwitchMultipleDefaults;
           err_if (not (is_simple_stmt s)) NotSimpleStatement;
           SwitchStatement (s, eo, scl)
       }
