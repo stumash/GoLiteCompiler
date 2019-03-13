@@ -1,4 +1,4 @@
-open Parser_exceptions
+module H = Helpers
 
 let _ =
     let lexbuf = Lexing.from_channel stdin in
@@ -6,9 +6,9 @@ let _ =
         let _ = Parse.program Lexer.scanner lexbuf in
         print_endline "OK: parser completed successfully"
     with
-    | Parse.Error               -> Helpers.print_error lexbuf "Parser"
-    | ExpressionIsNotIdentifier -> Helpers.print_error lexbuf "Parser: exp is not ident"
-    | VarDecIdsLenNeqExpsLen    -> Helpers.print_error lexbuf "Parser: variable declaration LHS size not equals RHS size"
-    | VarDecNeedsTypeOrInit     -> Helpers.print_error lexbuf "Parser: variable declaration needs type or initializer"
-    | NotSimpleStatement        -> Helpers.print_error lexbuf "Parser: statement is not a 'simple statement'"
-    | Lexer.Error               -> Helpers.print_error lexbuf "Scanner"
+    | Parse.Error                 -> Helpers.print_error lexbuf "Parser"
+    | H.ExpressionIsNotIdentifier -> H.print_error lexbuf "Parser: exp is not ident"
+    | H.VarDecIdsLenNeqExpsLen    -> H.print_error lexbuf "Parser: variable declaration LHS size not equals RHS size"
+    | H.VarDecNeedsTypeOrInit     -> H.print_error lexbuf "Parser: variable declaration needs type or initializer"
+    | H.NotSimpleStatement        -> H.print_error lexbuf "Parser: statement is not a 'simple statement'"
+    | Lexer.Error                 -> H.print_error lexbuf "Scanner"
