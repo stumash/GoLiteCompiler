@@ -328,7 +328,12 @@ statement_ :
     ;
 
 assignment_statement :
-    | es1=expression_list at=asg_tok es2=expression_list { AssignmentStatement (es1, at, es2) }
+    | es1=expression_list at=asg_tok es2=expression_list
+      {
+          err_if_neq_len es1 es2 VarDecIdsLenNeqExpsLen;
+          err_if ((List.length es1) != 1 && at != ASG) MultAsgCannotShorthand;
+          AssignmentStatement (es1, at, es2)
+      }
     ;
 
 short_val_declaration :
