@@ -91,7 +91,11 @@ and pp_stmt ?(nl=true) stmt =
     | ForStatement (so1, eo, so2, ss)     -> pp_for (so1, eo, so2, ss)
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
+<<<<<<< HEAD
+    | EmptyStatement                      -> ifp nl "\n"
+=======
     | BlockStatements ss                  -> p "{\n"; List.iter pp_stmt ss; p "}\n"
+>>>>>>> 6a2590306cbbdbe379c84e7f085de874b318187a
 
 (* assignment operator *)
 and pp_aop aop =

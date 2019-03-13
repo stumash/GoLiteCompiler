@@ -225,7 +225,7 @@ struct_type_lit :
     | STRUCT LCURLY x=separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
     ;
 struct_field_decl :
-    | ids=identifier_list ts=type_spec { (ids, ts) }
+    | ids=identifier_list ts=type_spec SEMICOLON{ (ids, ts) }
     ;
 slice_type_lit :
     | LBRACK RBRACK ts=type_spec { SliceTypeLiteral ts }
@@ -280,7 +280,6 @@ statements :
     |                                     { [] } 
     ;
 
-
 ident_type :
     | BLANKID                          { Blankid } (*Blank Identifier *)
     | s=IDENT                          { Ident s } (* Normal as is *)
@@ -327,8 +326,19 @@ statement_ :
     |                         { EmptyStatement }
     ;
 
+<<<<<<< HEAD
+statement_block :
+    | LCURLY ss=statements RCURLY { ss }
+    ;
+
+=======
+>>>>>>> 6a2590306cbbdbe379c84e7f085de874b318187a
 assignment_statement :
-    | es1=expression_list at=asg_tok es2=expression_list { AssignmentStatement (es1, at, es2) }
+    | es1=expression_list at=asg_tok es2=expression_list
+      {
+          err_if_neq_len es1 es2 VarDecIdsLenNeqExpsLen;
+          AssignmentStatement (es1, at, es2)
+      }
     ;
 
 short_val_declaration :

@@ -35,14 +35,15 @@ and statement =
   | PrintlnStatement of (expression list option)
   | ReturnStatement of expression option
   | IfStatement of if_statement
-  | SwitchStatement of (statement option) * (expression option) * (switch_clause list)
-  | ForStatement of (statement option) * (expression option) * (statement option) * (statement list)
+  | SwitchStatement of statement * (expression option) * (switch_clause list)
+  | ForStatement of statement * (expression option) * statement * (statement list)
+  | BlockStatements of (statement list)
   | Break
   | Continue
   | EmptyStatement
 
 and if_statement =
-  | If of (statement option) * expression * (statement list) * (else_statement option)
+  | If of statement * expression * (statement list) * (else_statement option)
 
 and else_statement =
   | Elseif of if_statement
@@ -112,14 +113,3 @@ and identifier_expression =
   | Blankid
   | Indexed of string * expression
   | StructAccess of string *  identifier_expression
-
-
-(* helpers *)
-
-let is_simple_stmt stmt =
-    match stmt with
-    | ExpressionStatement _ -> true
-    | ShortValDeclaration _ -> true
-    | AssignmentStatement _ -> true
-    | Inc _ | Dec _         -> true
-    | _                     -> false
