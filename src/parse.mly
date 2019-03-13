@@ -11,6 +11,8 @@
             | _ -> raise ExpressionIsNotIdentifier in
         List.map e_to_id es
 
+    let err_if b err = if b then raise err else ()
+
     (* raise err if o1 and o2 are None *)
     let err_ifboth_None o1 o2 err =
         match o1,o2 with
@@ -19,8 +21,22 @@
 
     (* raise err if l1 and l2 differ in length *)
     let err_if_neq_len l1 l2 err =
-        if (List.length l1) != (List.length l2) then raise err
-        else ()
+        err_if ((List.length l1) != (List.length l2)) err
+  
+    let is_simple_stmt stmt =
+        match stmt with
+        | ExpressionStatement e ->
+            (match e with
+            | FunctionCall (str, es) ->
+                (match str with
+                | "append" | "len" | "cap" -> false
+                | _ -> true)
+            | _ -> true)
+        | EmptyStatement        -> true
+        | ShortValDeclaration _ -> true
+        | AssignmentStatement _ -> true
+        | Inc _ | Dec _         -> true
+        | _                     -> false
 %}
 
 (* TOKENS *)
@@ -209,7 +225,7 @@ struct_type_lit :
     | STRUCT LCURLY x=separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
     ;
 struct_field_decl :
-    | ids=identifier_list ts=type_spec { (ids, ts) }
+    | ids=identifier_list ts=type_spec SEMICOLON{ (ids, ts) }
     ;
 slice_type_lit :
     | LBRACK RBRACK ts=type_spec { SliceTypeLiteral ts }
@@ -243,25 +259,31 @@ for_loop :
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
-    | s1=statement SEMICOLON e=exp SEMICOLON s2=statement LCURLY ss=statements RCURLY
-      { ForStatement (Some s1, Some e, Some s2, ss) }
-    | LCURLY ss=statements RCURLY { ForStatement (None, None, None, ss) }
-    | e=exp LCURLY ss=statements RCURLY { ForStatement (None, Some e, None, ss) }
-   
+    | s1=statement_ SEMICOLON eo=option(exp) SEMICOLON s2=statement_ LCURLY ss=statements RCURLY
+      {
+          err_if ((not (is_simple_stmt s1)) || (not (is_simple_stmt s2))) NotSimpleStatement;
+          ForStatement (s1, eo, s2, ss)
+      }
+    | LCURLY ss=statements RCURLY
+      {
+          ForStatement (EmptyStatement, None, EmptyStatement, ss)
+      }
+    | e=exp LCURLY ss=statements RCURLY
+      {
+          ForStatement (EmptyStatement, Some e, EmptyStatement, ss)
+      }
     ;
 
 (* statements *)
 statements :
-    | s=statement SEMICOLON ss=statements (*SEMI*) { s::ss }
-    | { [] }
-    
+    | s=statement SEMICOLON ss=statements { s::ss }
+    |                                     { [] } 
     ;
-
 
 ident_type :
     | BLANKID                          { Blankid } (*Blank Identifier *)
     | s=IDENT                          { Ident s } (* Normal as is *)
-    | s=IDENT LBRACK o=operand RBRACK  { Indexed (s, o) } (* array and slice element access *)
+    | s=IDENT LBRACK e=exp RBRACK  { Indexed (s, e) } (* array and slice element access *)
     | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
     ;
 
@@ -281,6 +303,14 @@ asg_tok :
     ;
 
 statement :
+    | s=statement_ { s }
+    | s=block_statement { s }
+    ;
+
+block_statement :
+    | LCURLY ss=statements RCURLY { BlockStatements ss }
+
+statement_ :
     | e=exp                   { ExpressionStatement e }
     | s=assignment_statement  { s }
     | d=block_declaration     { DeclarationStatement d }
@@ -294,18 +324,6 @@ statement :
     | BREAK                   { Break }
     | CONTINUE                { Continue }
     |                         { EmptyStatement }
-    ;
-
-(* TODO uncomment and resolve *)
-(*simple_statement :*)
-    (*| exp SEMICOLON                   { }*)
-    (*| inc_dec_statement SEMICOLON     { }*)
-    (*| assignment_statement SEMICOLON  { }*)
-    (*| short_val_declaration SEMICOLON { }*)
-    (*;*)
-
-statement_block :
-    | LCURLY ss=statements RCURLY { ss }
     ;
 
 assignment_statement :
@@ -326,18 +344,33 @@ inc_dec_statement :
     ;
 
 if_statement :
-    | IF e=exp LCURLY ss=statement_block RCURLY en=endif { If (None, e, ss, en) }
+    | IF e=exp LCURLY ss=statements RCURLY en=endif
+      {
+          If (EmptyStatement, e, ss, en)
+      }
+    | IF s=statement_ SEMICOLON e=exp LCURLY ss=statements RCURLY en=endif
+      {
+          err_if (not (is_simple_stmt s)) NotSimpleStatement;
+          If (s, e, ss, en)
+      }
     ;
 endif :
     | ELSE ifs=if_statement                 { Some (Elseif ifs) }
-    | ELSE LCURLY ss=statement_block RCURLY { Some (Else ss) }
+    | ELSE LCURLY ss=statements RCURLY { Some (Else ss) }
     |                                       { None }
     ;
 
 switch_statement :
-    | SWITCH  eo=option(exp) LCURLY
-          scl=nonempty_list(expr_case_clause)
-      RCURLY { SwitchStatement (None, eo, scl) }
+    | SWITCH eo=option(exp) LCURLY
+          scl=list(expr_case_clause)
+      RCURLY { SwitchStatement (EmptyStatement, eo, scl) }
+    | SWITCH s=statement_ SEMICOLON eo=option(exp) LCURLY
+          scl=list(expr_case_clause)
+      RCURLY
+      {
+          err_if (not (is_simple_stmt s)) NotSimpleStatement;
+          SwitchStatement (s, eo, scl)
+      }
 
 expr_case_clause :
     | esc=expr_switch_case COLON ss=statements
@@ -389,7 +422,7 @@ exp :
     ;
 (* 'keyword functions' *)
 exp_other :
-    | str=IDENT LPAREN es=expression_list RPAREN { FunctionCall (str, es) } (*function calls *)
+    | str=IDENT LPAREN es=separated_list(COMMA, exp) RPAREN { FunctionCall (str, es) } (*function calls *)
     | APPEND LPAREN e1=exp COMMA e2=exp RPAREN   { Append (e1, e2) } (* Append *)
     | LEN LPAREN e=exp RPAREN                    { Len e } (* array/slice length *)
     | CAP LPAREN e=exp RPAREN                    { Cap e } (* array/slice capacity *)

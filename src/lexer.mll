@@ -27,6 +27,7 @@
             | LIT_BOOL b                              -> true
             | LIT_RUNE s                              -> true
             | LIT_STRING s                            -> true
+            | LIT_RAW_STRING r                         -> true
             | RPAREN | RBRACK | RCURLY | INC | DEC    -> true
             | BREAK | CONTINUE | FALLTHROUGH | RETURN -> true
             | _                                       -> false
@@ -173,6 +174,8 @@ rule scanner = parse
   | ">" as c              { mpt "%c\n" c; slt GT }
   | ">=" as s             { mpt "%s\n" s; slt GTEQ }
   | "!" as c              { mpt "%c\n" c; slt NOT }
+  | "&&" as s             { mpt "%s\n" s; slt AND }
+  | "||" as s             { mpt "%s\n" s; slt OR }
   | "<-" as s             { mpt "%s\n" s; slt CHASG } (* assignment *)
   | "=" as c              { mpt "%c\n" c; slt ASG }
   | ":=" as s             { mpt "%s\n" s; slt IASG }

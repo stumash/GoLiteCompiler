@@ -78,6 +78,7 @@ and pp_stmt ?(nl=true) stmt =
     | ShortValDeclaration (ids, es)       -> pp_idlist ids; p " := "; pp_explist es; ifp nl "\n"
     | Inc e                               -> pp_exp e; p "++"; ifp nl "\n"
     | Dec e                               -> pp_exp e; p "--"; ifp nl "\n"
+    | EmptyStatement                      -> ifp nl "\n"
     (* all other statements *)
     | DeclarationStatement decl           -> pp_decl decl
     | PrintStatement Some es              -> p "print("; pp_explist es; p ")\n"
@@ -90,6 +91,7 @@ and pp_stmt ?(nl=true) stmt =
     | ForStatement (so1, eo, so2, ss)     -> pp_for (so1, eo, so2, ss)
     | Break                               -> p "break\n"
     | Continue                            -> p "continue\n"
+    | BlockStatements ss                  -> p "{\n"; List.iter pp_stmt ss; p "}\n"
 
 (* assignment operator *)
 and pp_aop aop =
@@ -108,8 +110,8 @@ and pp_aop aop =
     | NANDEQ  -> p " &^= "
 
 (* if statement *)
-and pp_ifs (If (so, e, ss, elso)) =
-    p "if "; ifsome so (pp_stmt ~nl:false); p "; "; pp_exp e; p " {\n";
+and pp_ifs (If (s, e, ss, elso)) =
+    p "if "; pp_stmt ~nl:false s; p "; "; pp_exp e; p " {\n";
     List.iter pp_stmt ss;
     p "}";
     match elso with
@@ -123,8 +125,8 @@ and pp_els els =
     | Else ss    -> p "else {\n"; List.iter pp_stmt ss; p "}\n"
 
 (* switch statemtent *)
-and pp_sw (so, eo, scs) =
-    p "switch "; ifsome so (fun s -> pp_stmt ~nl:false s; p "; "); ifsome eo pp_exp; p " {\n";
+and pp_sw (s, eo, scs) =
+    p "switch "; pp_stmt ~nl:false s; p ";"; ifsome eo pp_exp; p " {\n";
     List.iter pp_sc scs;
     p "}\n"
 
@@ -135,9 +137,9 @@ and pp_sc sc =
     | Default ss    -> p "default {\n"; List.iter pp_stmt ss; p "}\n"
     | Case (es, ss) -> p "case "; pp_explist es; p " {\n"; List.iter pp_stmt ss; p "}\n"
 
-and pp_for (so1, eo, so2, ss) =
+and pp_for (s1, eo, s2, ss) =
     p "for ";
-    ifsome so1 (pp_stmt ~nl:false); p "; "; ifsome eo pp_exp; p "; "; ifsome so2 (pp_stmt ~nl:false);
+    pp_stmt ~nl:false s1; p "; "; ifsome eo pp_exp; p "; "; pp_stmt ~nl:false s2;
     p " {\n";
     List.iter pp_stmt ss;
     p "}\n"

@@ -11,6 +11,7 @@ let _ =
     | ExpressionIsNotIdentifier -> Helpers.print_error lexbuf "Parser: exp is not ident"
     | VarDecIdsLenNeqExpsLen    -> Helpers.print_error lexbuf "Parser: variable declaration LHS size not equals RHS size"
     | VarDecNeedsTypeOrInit     -> Helpers.print_error lexbuf "Parser: variable declaration needs type or initializer"
+    | NotSimpleStatement        -> Helpers.print_error lexbuf "Parser: statement is not a 'simple statement'"
     | Lexer.Error -> Helpers.print_error lexbuf "Scanner"
     | _                         -> Helpers.print_error lexbuf "Pretty printer"
 
