@@ -188,9 +188,13 @@ var_specs :
     ;
 var_spec :
     | ids=identifier_list tso=option(type_spec) eso=option(var_spec_rhs)
+   
       {
           err_ifboth_None tso eso VarDecNeedsTypeOrInit;
-          (match eso with | None -> () | Some es -> err_if_neq_len ids es VarDecIdsLenNeqExpsLen);
+          (*IS THIS COMPLETE ??? *)
+          (match eso with 
+            | None -> ()
+            | Some eso -> err_if_neq_len ids eso VarDecIdsLenNeqExpsLen);
           (ids, tso, eso)
       }
     ;
@@ -203,6 +207,7 @@ type_declaration :
     ;
 type_declaration_ :
     | s=IDENT ts=type_spec { TypeDeclaration [(Identifier s, ts)] }
+    | s=IDENT LPAREN ts=type_spec RPAREN { TypeDeclaration [(Identifier s, ts)] }
     | LPAREN s_tds=s_type_specs RPAREN { TypeDeclaration s_tds }
     ;
 s_type_specs :
@@ -219,10 +224,10 @@ type_literal :
     | sltl=slice_type_lit { sltl }
     ;
 array_type_lit :
-    | LBRACK e=exp RBRACK ts=type_spec { ArrayTypeLiteral (e, ts) }
+    | LBRACK i=LIT_INT RBRACK ts=type_spec { ArrayTypeLiteral (LitInt i, ts) }
     ;
 struct_type_lit :
-    | STRUCT LCURLY x=separated_nonempty_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
+    | STRUCT LCURLY x=separated_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
     ;
 struct_field_decl :
     | ids=identifier_list ts=type_spec { (ids, ts) }
@@ -284,7 +289,7 @@ statements :
 ident_type :
     | BLANKID                          { Blankid } (*Blank Identifier *)
     | s=IDENT                          { Ident s } (* Normal as is *)
-    | s=IDENT LBRACK e=exp RBRACK  { Indexed (s, e) } (* array and slice element access *)
+    | s=IDENT LBRACK i=LIT_INT RBRACK  { Indexed (s, LitInt i) } (* array and slice element access *)
     | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
     ;
 
