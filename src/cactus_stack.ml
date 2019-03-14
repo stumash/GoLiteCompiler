@@ -2,9 +2,9 @@ module T = Golitetypes
 
 (* Cactus-Stack Node*)
 type cs_node =
-    | Empty
-    | CtNode of
-        cs_node *                              (* parent *)
-        cs_node list *                         (* children *)
-        (string, (T.vcat, T.gltype)) Hashtbl.t (* data *)
-
+    | CsRoot
+    | CsNode of {
+        parent           : cs_node;
+        mutable children : cs_node list;
+        context          : (string, (T.vcat, T.gltype)) Hashtbl.t
+      }

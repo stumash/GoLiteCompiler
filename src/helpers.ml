@@ -1,3 +1,5 @@
+(* ERROR HELPERS *)
+
 (* print the compiler stage that detected the error, and its cause *)
 let print_error lexbuf compiler_stage = Lexing.(
     let {pos_lnum; pos_cnum; pos_bol} = lexbuf.lex_curr_p in
@@ -12,8 +14,10 @@ exception VarDecIdsLenNeqExpsLen
 exception NotSimpleStatement
 exception MultAsgCannotShorthand
 exception SwitchMultipleDefaults
+exception TypeCheckError of string
 
 let handle_error ?(default="Default") lb = function
+    | TypeCheckError str        -> print_error lb @@ "TypeChecker: " ^ str
     | ExpressionIsNotIdentifier -> print_error lb "Parser: exp is not ident"
     | VarDecIdsLenNeqExpsLen    -> print_error lb "Parser: var. decl. LHS size unequal RHS size"
     | VarDecNeedsTypeOrInit     -> print_error lb "Parser: var. decl. needs type or initializer"
@@ -22,3 +26,11 @@ let handle_error ?(default="Default") lb = function
     | SwitchMultipleDefaults    -> print_error lb "Parser: switch has multiple default cases"
     | LexerError                -> print_error lb "Scanner"
     | _                         -> print_error lb default
+
+
+(* GENERAL HELPERS *)
+
+let ifsome o f =
+    match o with
+    | None -> ()
+    | Some a -> f a

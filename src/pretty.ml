@@ -1,4 +1,5 @@
 open Tree
+open Helpers
 open Printf
 
 (* local helpers *)
@@ -7,11 +8,6 @@ open Printf
 let pp_comma_separated_xs xs pp_x =
     let f i x = pp_x x; if i != (List.length xs)-1 then print_string ", " else () in
     List.iteri f xs
-
-let ifsome o f =
-    match o with
-    | Some a -> f a
-    | _      -> ()
 
 (*-----------------------------------*
  * pp - Pretty Print
