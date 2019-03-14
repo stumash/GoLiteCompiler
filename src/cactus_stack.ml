@@ -4,7 +4,7 @@ module T = Golitetypes
 type cs_node =
     | CsRoot
     | CsNode of {
-        parent           : cs_node;
-        mutable children : cs_node list;
-        context          : (string, (T.vcat, T.gltype)) Hashtbl.t
+        parent   : cs_node;
+        children : ref cs_node list;
+        context  : (string, (T.vcat, T.gltype)) Hashtbl.t
       }

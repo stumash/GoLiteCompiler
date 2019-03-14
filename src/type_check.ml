@@ -40,8 +40,8 @@ let err_if_id_not_in_scope (Identifer str) =
             match (!current_scope).parent with
             | CsRoot -> raise TypeCheckError (str ^ " not found in scope")
             | csn    -> err_if_id_not_in_scope' str csn.parent
-    in
-    err_if_id_not_in_scope' str current_scope
+   in
+   err_if_id_not_in_scope' str current_scope
 
 let type_check_prog prog =
     | EmptyProgram -> true
@@ -55,7 +55,6 @@ let type_check_decl d =
 
 let type_check_ts ts =
     | Identifier str ->
-
 
 let type_check_vd (ids, tso, eso) =
     List.iter err_if_id_in_current_scope ids;
