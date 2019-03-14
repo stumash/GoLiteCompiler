@@ -227,10 +227,15 @@ array_type_lit :
     | LBRACK i=LIT_INT RBRACK ts=type_spec { ArrayTypeLiteral (LitInt i, ts) }
     ;
 struct_type_lit :
-    | STRUCT LCURLY x=separated_list(SEMICOLON, struct_field_decl) RCURLY { StructTypeLiteral x }
+    | STRUCT LCURLY x=struct_field_decls  RCURLY { StructTypeLiteral (List.rev x) }
     ;
+struct_field_decls :
+    | { [] }
+    | ss=struct_field_decls  s=struct_field_decl SEMICOLON {s @ ss}
+
+;
 struct_field_decl :
-    | ids=identifier_list ts=type_spec { (ids, ts) }
+    | ids=identifier_list ts=type_spec { [(ids, ts)] }
     ;
 slice_type_lit :
     | LBRACK RBRACK ts=type_spec { SliceTypeLiteral ts }
