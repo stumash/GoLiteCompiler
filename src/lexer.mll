@@ -69,7 +69,7 @@ let nzdigit = ['1'-'9'] (* non-zero digit *)
 let octal_digit = ['0'-'7']
 let hex_digit = ['0'-'9' 'a'-'f' 'A'-'F']
 
-let id = ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let id = ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 let line_comment = '/''/'[^ '\n']*
 let block_comment = '/''*' ( [^ '*'] | '*''*'* [^ '/'] )* '*''*'* '/'
