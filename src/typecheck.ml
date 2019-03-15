@@ -53,8 +53,6 @@ let ordmsg  = "IntT, RuneT, FloatT, StringT"
 let cmpmsg  = "IntT, RuneT, FloatT, StringT, BoolT, StructT, ArrayT"
 let sctmsg  = "StructT"
 
-let zip = List.map2 (fun x y -> x,y)
-
 let get_vcat_gltype_from_str str =
     let rec get_vcat_gltype_from_str' str scope =
         try Hashtbl.find (!scope).context str with
@@ -90,7 +88,7 @@ let err_if_id_in_current_scope (Identifier str) =
     | Hashtbl.Not_found -> ()
 
 (* recurse until entry found, then do check *)
-let err_if_id_not_declared ?(check=(fun a b = ())) (Identifer str) =
+let err_if_id_not_declared ?(check=(fun a b -> ())) (Identifer str) =
     let rec err_if_id_not_declared' str scope =
         try
             let (cat, glt) = Hashtbl.find (!scope).context str in
@@ -116,6 +114,7 @@ let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
 (* TYPE CHECKER ------------------------------------------------------------------------------------------------- *)
 
 let type_check_prog prog =
+    match prog with
     | EmptyProgram      -> true
     | Program (pkg, ds) -> List.iter type_check_decl ds
 
@@ -136,23 +135,23 @@ and type_check_vd (ids, tso, eso) =
         | None, Some es ->
             let e_glts = List.map type_check_e es in
             let h = List.hd e_glts in
-            if let bs = List.map ((=) h) e_glts in
-               List.fold_left (f acc b -> acc && b) bs true 
+            if (let bs = List.map ((=) h) e_glts in
+               List.fold_left (f acc b -> (acc && b)) true bs)
             then h
             else raise TypeCheckError "vardec: explist contains multiple types"
         | Some ts, Some es ->
             let t_glt = type_check_ts ts in
             let e_glts = List.map type_check_e es in
-            if let bs = List.map ((=) t_glt) e_glts in
-               List.fold_left (f acc b -> acc && b) bs true 
+            if (let bs = List.map ((=) t_glt) e_glts in
+               List.fold_left (f acc b -> (acc && b)) true bs)
             then t_glt
             else raise TypeCheckError "vardec: explist type != declared type" in
     let add_id_to_scope (Identifier str) =
-        Hashtbl.add !(current_scope).context str (T.Variable , glt) in
+        Hashtbl.add (!current_scope).context str (T.Variable, glt) in
     List.iter add_id_to_scope ids
 
 and type_check_ts ts = (* return the checked type *)
-    | IdentifierType (Identifier str) as idt ->
+    | IdentifierType ((Identifier str) as idt) ->
         err_if_type_not_declared idt;
         T.NamedT str
     | ArrayTypeLiteral (es, ts) ->
@@ -189,25 +188,25 @@ and type_check_e e =
     | Uxor e   -> type_check_e e |> pt_if_rt is_intT intmsg
     | Not e    -> type_check_e e |> pt_if_rt is_BoolT "BoolT"
     (* binary expression *)
-    | Or (e1, e2)    -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_BoolT "BoolT"
-    | And (e1, e2)   -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_BoolT "BoolT"
-    | Eq (e1, e2)    -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_cmpT cmpmsg   |> (fun x -> T.BoolT)
-    | Neq (e1, e2)   -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_cmpT cmpmsg   |> (fun x -> T.BoolT)
-    | Gt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_ordT ordmsg   |> (fun x -> T.BoolT)
-    | Gteq (e1, e2)  -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_ordT ordmsg   |> (fun x -> T.BoolT)
-    | Lt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_ordT ordmsg   |> (fun x -> T.BoolT)
-    | Lteq (e1, e2)  -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_ordT ordmsg   |> (fun x -> T.BoolT)
-    | Plus (e1, e2)  -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_ordT ordmsg
-    | Minus (e1, e2) -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_numT nummsg
-    | Mult (e1, e2)  -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_numT nummsg
-    | Div (e1, e2)   -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_numT nummsg
-    | Mod (e1, e2)   -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
-    | Bor (e1, e2)   -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
-    | Band (e1, e2)  -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
-    | Xor (e1, e2)   -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
-    | Nand (e1, e2)  -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
-    | Lshft (e1, e2) -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
-    | Rshft (e1, e2) -> pt_if_type_check_eq e1 e2 |> pt_if_rt is_intT intmsg
+    | Or (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_BoolT "BoolT")
+    | And (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_BoolT "BoolT")
+    | Eq (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_cmpT cmpmsg)   |> (fun x -> T.BoolT)
+    | Neq (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_cmpT cmpmsg)   |> (fun x -> T.BoolT)
+    | Gt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.BoolT)
+    | Gteq (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.BoolT)
+    | Lt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.BoolT)
+    | Lteq (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.BoolT)
+    | Plus (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)
+    | Minus (e1, e2) -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_numT nummsg)
+    | Mult (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_numT nummsg)
+    | Div (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_numT nummsg)
+    | Mod (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Bor (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Band (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Xor (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Nand (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Lshft (e1, e2) -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Rshft (e1, e2) -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
     (* function calls *)
     | Append (e1, e2) ->
         (match type_check_e e1 with
