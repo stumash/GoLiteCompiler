@@ -166,7 +166,7 @@ and pp_exp exp =
     | Uminus (e)                   -> p " - "; pp_exp e
     | Not (e)                      -> p " ! "; pp_exp e
     | Uxor (e)                     -> p " ^ "; pp_exp e
-    | FunctionCall (str, es)       -> printf "%s(" str; pp_explist es; p ")"
+    | FunctionCall (id, es)        -> pp_id id; p "("; pp_explist es; p ")"
     | Append (e1, e2)              -> p "append("; pp_explist [e1;e2]; p ")"
     | Len (e)                      -> p "len("; pp_exp e; p ")"
     | Cap (e)                      -> p "cap("; pp_exp e; p ")"
@@ -181,9 +181,9 @@ and pp_exp exp =
 
 and pp_idexp idexp =
     match idexp with
-    | Ident (str)               -> p str
-    | Indexed (str, e)          -> printf "%s[" str; pp_exp e; p "]"
-    | StructAccess (str, idexp) -> printf "%s." str; pp_idexp idexp
+    | Ident (str)             -> p str
+    | Indexed (exp, e)        -> pp_exp exp; p "["; pp_exp e; p "]"
+    | StructAccess (exp, str) -> pp_exp exp; printf ".%s" str
 
 (* helpers *)
 

@@ -94,7 +94,7 @@ and expression =
   | Not of expression
   | Uxor of expression
 (* function calls *)
-  | FunctionCall of string  * (expression list)
+  | FunctionCall of identifier  * (expression list)
   | Append of expression * expression
   | Len of expression
   | Cap of expression
@@ -110,5 +110,5 @@ and expression =
 
 and identifier_expression =
   | Ident of string
-  | Indexed of string * expression
-  | StructAccess of string *  identifier_expression
+  | Indexed of expression * expression
+  | StructAccess of expression * string

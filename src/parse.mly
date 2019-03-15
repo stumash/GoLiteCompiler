@@ -4,11 +4,12 @@
     open Tree
     open Helpers
 
+    let e_to_id = function
+        | IdentifierExpression (Ident str) -> Identifier str
+        | _ -> raise ExpressionIsNotIdentifier
+
     (* expression list to identifier list *)
     let es_to_ids es =
-        let e_to_id = function
-            | IdentifierExpression (Ident str) -> Identifier str
-            | _ -> raise ExpressionIsNotIdentifier in
         List.map e_to_id es
 
     let err_if b err = if b then raise err else ()
@@ -27,7 +28,7 @@
         match stmt with
         | ExpressionStatement e ->
             (match e with
-            | FunctionCall (str, es) ->
+            | FunctionCall (Identifier str, es) ->
                 (match str with
                 | "append" | "len" | "cap" -> false
                 | _ -> true)
@@ -187,11 +188,9 @@ var_specs :
     | vd=var_spec SEMICOLON vds=var_specs { vd::vds }
     ;
 var_spec :
-    | ids=identifier_list tso=option(type_spec) eso=option(var_spec_rhs)
-   
+    | ids=identifier_list tso=option(type_spec) eso=option(var_spec_rhs)   
       {
           err_ifboth_None tso eso VarDecNeedsTypeOrInit;
-          (*IS THIS COMPLETE ??? *)
           (match eso with 
             | None -> ()
             | Some eso -> err_if_neq_len ids eso VarDecIdsLenNeqExpsLen);
@@ -207,7 +206,6 @@ type_declaration :
     ;
 type_declaration_ :
     | s=IDENT ts=type_spec { TypeDeclaration [(Identifier s, ts)] }
-    | s=IDENT LPAREN ts=type_spec RPAREN { TypeDeclaration [(Identifier s, ts)] }
     | LPAREN s_tds=s_type_specs RPAREN { TypeDeclaration s_tds }
     ;
 s_type_specs :
@@ -217,6 +215,7 @@ s_type_specs :
 type_spec :
     | s=IDENT { IdentifierType (Identifier s) }
     | tl=type_literal { tl }
+    | LPAREN ts=type_spec RPAREN { ts }
     ;
 type_literal :
     | atl=array_type_lit { atl }
@@ -293,8 +292,12 @@ statements :
 
 ident_type :
     | s=IDENT                          { Ident s } (* Normal as is *)
-    | s=IDENT LBRACK e=exp RBRACK  { Indexed (s, e) } (* array and slice element access *)
-    | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
+    | LPAREN exp=exp RPAREN  LBRACK e=exp RBRACK   { Indexed (exp, e) } (* array and slice element access *)
+    | exp=funccall  LBRACK e=exp RBRACK   { Indexed (exp, e) }
+    | exp=ident_type  LBRACK e=exp RBRACK   { Indexed (IdentifierExpression exp, e) }
+    | LPAREN exp=exp RPAREN DOT id=IDENT        { StructAccess (exp, id) } (* Struct element access *)
+    | e=funccall DOT id=IDENT               {StructAccess (e, id)}
+    | e=ident_type DOT id=IDENT             {StructAccess (IdentifierExpression e, id)}
     ;
 
 asg_tok :
@@ -321,7 +324,7 @@ block_statement :
     | LCURLY ss=statements RCURLY { BlockStatements ss }
 
 statement_ :
-    | e=exp                   { ExpressionStatement e }
+    | e=funccall              { ExpressionStatement e }
     | s=assignment_statement  { s }
     | d=block_declaration     { DeclarationStatement d }
     | s=short_val_declaration { s }
@@ -445,17 +448,22 @@ exp :
     ;
 (* 'keyword functions' *)
 exp_other :
-    | str=IDENT LPAREN es=separated_list(COMMA, exp) RPAREN { FunctionCall (str, es) } (*function calls *)
-    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN   { Append (e1, e2) } (* Append *)
-    | LEN LPAREN e=exp RPAREN                    { Len e } (* array/slice length *)
-    | CAP LPAREN e=exp RPAREN                    { Cap e } (* array/slice capacity *)
-    | LPAREN e=exp RPAREN                        { ParenExpression e } (* '(' exp ')' *)
-    | e=operand                                  { e }
+    | e=funccall                                   { e } 
+    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN { Append (e1, e2) } (* Append *)
+    | LEN LPAREN e=exp RPAREN                  { Len e } (* array/slice length *)
+    | CAP LPAREN e=exp RPAREN                  { Cap e } (* array/slice capacity *)
+    | LPAREN e=exp RPAREN                      { ParenExpression e } (* '(' exp ')' *)
+    | e=operand                                { e }
+    ;
+
+funccall :
+    | str=IDENT LPAREN es=separated_list(COMMA, exp) RPAREN           { FunctionCall (Identifier str, es) }
+    | LPAREN e=exp RPAREN LPAREN es=separated_list(COMMA, exp) RPAREN { FunctionCall ((e_to_id e), es) } 
     ;
 
 (* identifiers and rvalues *)
 operand :
-    | e=ident_type       { IdentifierExpression e }
+    | idexp=ident_type   { IdentifierExpression idexp }
     | i=LIT_INT          { LitInt i }
     | b=LIT_BOOL         { LitBool b }
     | f=LIT_FLOAT        { LitFloat f }
