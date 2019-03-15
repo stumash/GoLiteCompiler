@@ -120,7 +120,7 @@ rule scanner = parse
   | "switch" as s         { mpt "%s\n" s; slt SWITCH }
   | "type" as s           { mpt "%s\n" s; slt TYPE }
   | "var" as s            { mpt "%s\n" s; slt VAR }
-  | "_"                   { mpt "%s\n" "blank_identifier"; slt BLANKID }
+  | "_"   as c            { mpt "%s\n" "blank_identifier"; slt (IDENT (String.make 1 c)) }
 (* 'keyword' functions *)
   | "print" as s          { mpt "%s\n" s; slt PRINT }
   | "println" as s        { mpt "%s\n" s; slt PRINTLN }

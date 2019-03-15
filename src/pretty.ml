@@ -182,7 +182,6 @@ and pp_exp exp =
 and pp_idexp idexp =
     match idexp with
     | Ident (str)               -> p str
-    | Blankid                   -> p "_"
     | Indexed (str, e)          -> printf "%s[" str; pp_exp e; p "]"
     | StructAccess (str, idexp) -> printf "%s." str; pp_idexp idexp
 
