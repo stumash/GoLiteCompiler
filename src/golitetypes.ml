@@ -24,7 +24,7 @@ let string_of_vcat vc =
     match vc with
     | Type -> "Type"
     | Constant -> "Constant"
-    | Varialbe -> "Variable"
+    | Variable -> "Variable"
 
 let string_of_strs ?(sep=",") strs =
     let f (i, acc) str =
@@ -34,7 +34,7 @@ let string_of_strs ?(sep=",") strs =
         (i+1, acc') in
     snd @@ List.fold_left f (0,"") strs
 
-let string_of_gltype gt =
+let rec string_of_glt gt =
     match gt with
     | IntT -> "IntT"
     | FloatT -> "FloatT"
@@ -43,15 +43,15 @@ let string_of_gltype gt =
     | StringT -> "StringT"
     | NamedT str -> "NamedT( " ^ str ^ " )"
     | StructT stds ->
-        "{ " ^ (List.map string_of_std stds) ^"}"
+        "{ " ^ (string_of_strs (List.map string_of_std stds)) ^"}"
     | ArrayT (i, gt) ->
-        "[" ^ (string_of_int i) ^ "]" ^ (string_of_gltype gt)
+        "[" ^ (string_of_int i) ^ "]" ^ (string_of_glt gt)
     | SliceT gt ->
-        "[ ]" ^ (string_of_gltype gt)
-    | FunctionT (str, gts, gt) ->
-        let strs = List.map string_of_gltype gts in
-        str ^ "(" ^ (string_of_strs strs) ^ ") -> " ^ (string_of_gltype gt)
+        "[ ]" ^ (string_of_glt gt)
+    | FunctionT (gts, gt) ->
+        let strs = List.map string_of_glt gts in
+        "(" ^ (string_of_strs strs) ^ ") -> " ^ (string_of_glt gt)
     | Void -> "Void"
 
 and string_of_std (strs, gt) =
-    (string_of_strs strs) ^ (string_of_gltype gt) ^ "; "
+    (string_of_strs strs) ^ (string_of_glt gt) ^ "; "

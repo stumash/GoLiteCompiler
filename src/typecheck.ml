@@ -14,39 +14,48 @@ let root_context =
     Hashtbl.add ht "rune"    (T.Type, T.RuneT);
     Hashtbl.add ht "string"  (T.Type, T.StringT);
     (* literals *)
-    Hashtbl.add ht "true"  (T.Constant, T.NamedType "bool");
-    Hashtbl.add ht "false" (T.Constant, T.NamedType "bool");
+    Hashtbl.add ht "true"  (T.Constant, T.NamedT "bool");
+    Hashtbl.add ht "false" (T.Constant, T.NamedT "bool");
     ht
 
-let root = CsNode {
+let root_scope = CsNode {
     parent = CsRoot;
-    children = [CsNode {
-        parent = root;
-        children = []
-        context = Hashtbl.create 8
-    }];
-    context = root_context
+    children = ref [];
+    context = root_context;
 }
 
+let global_scope = CsNode {
+    parent = root_scope;
+    children = ref [];
+    context = Hashtbl.create 8;
+}
+
+let () =
+    match root_scope with
+    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsNode { parent; children; context } ->
+        children := global_scope :: !children
+
+
 (* initialized to global scope, the only child of the root scope *)
-let current_scope = ref (List.hd root.children)
+let current_scope = ref global_scope
 
-(* HELPERS ------------------------------------------------------------------------------------------- *)
+(* HELPERS -------------------------------------------------------------------------------------------- *)
 
-let is_IntT t    = match t with T.IntT -> true | _ -> false
-let is_FloatT t  = match t with T.FloatT -> true | _ -> false
-let is_BoolT t   = match t with T.BoolT -> true | _ -> false
-let is_RuneT t   = match t with T.RuneT -> true | _ -> false
-let is_StringT t = match t with T.StringT -> true | _ -> false
-let is_StructT t = match t with T.StructT _ -> true | _ -> false
-let is_SliceT t  = match t with T.SliceT _ -> true | _ -> false
-let is_ArrayT t  = match t with T.ArrayT (_,_) -> true | _ -> false
-let is_FunctionT t = match t with T.FunctionT (_,_) -> true | _ -> false
+let is_IntT t    = match t with | T.IntT -> true | _ -> false
+let is_FloatT t  = match t with | T.FloatT -> true | _ -> false
+let is_BoolT t   = match t with | T.BoolT -> true | _ -> false
+let is_RuneT t   = match t with | T.RuneT -> true | _ -> false
+let is_StringT t = match t with | T.StringT -> true | _ -> false
+let is_StructT t = match t with | T.StructT _ -> true | _ -> false
+let is_SliceT t  = match t with | T.SliceT _ -> true | _ -> false
+let is_ArrayT t  = match t with | T.ArrayT (_,_) -> true | _ -> false
+let is_FunctionT t = match t with | T.FunctionT (_,_) -> true | _ -> false
 
 let is_intT = [is_IntT; is_RuneT]
-let is_numT = is_integerT @ [is_FloatT]
-let is_ordT = is_numericT @ [is_StringT]
-let is_cmpT = is_orderedTs @ [is_BoolT; is_StructT; is_ArrayT]
+let is_numT = is_intT @ [is_FloatT]
+let is_ordT = is_numT @ [is_StringT]
+let is_cmpT = is_ordT @ [is_BoolT; is_StructT; is_ArrayT]
 let intmsg  = "IntT, RuneT"
 let nummsg  = "IntT, RuneT, FloatT"
 let ordmsg  = "IntT, RuneT, FloatT, StringT"
@@ -55,73 +64,73 @@ let sctmsg  = "StructT"
 
 let get_vcat_gltype_from_str str =
     let rec get_vcat_gltype_from_str' str scope =
-        try Hashtbl.find (!scope).context str with
-        | Hashtbl.Not_found ->
-            (match (!scope).parent with
-            | CsRoot -> raise TypeCheckError (str ^ " not declared")
+        try Hashtbl.find (context scope) str with
+        | Not_found ->
+            (match parent scope with
+            | CsRoot -> raise (TypeCheckError (str ^ " not declared"))
             | csn    -> get_vcat_gltype_from_str' str csn) in
-    get_vcat_gltype_from_str' str current_scope
+    get_vcat_gltype_from_str' str !current_scope
 
 let rt glt =
     let rec rt' glt scope =
         match glt with
         | T.NamedT str -> 
-            (try rt' (snd (Hashtbl.find (!scope).context str)) scope with
-            | Hashtbl.Not_found ->
-                (match (!scope).parent with
-                | CsRoot -> raise TypeCheckError (str^" not declared")
-                | csn    -> rt' str csn))
+            (try rt' (snd (Hashtbl.find (context scope) str)) scope with
+            | Not_found ->
+                (match parent scope with
+                | CsRoot -> raise (TypeCheckError (str^" not declared"))
+                | csn    -> rt' glt csn))
         | _ -> glt in
-    rt' glt current_scope
+    rt' glt !current_scope
 
 (* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
 let pt_if_rt fs msg y =
     let y' = rt y in
     if List.exists (fun f -> f y') fs then y
-    else raise TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg)
+    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg))
 
 let err_if_id_in_current_scope (Identifier str) =
     try
-        let _ = Hashtbl.find (!current_scope).context str in
-        raise TypeCheckError (str ^ " is already in current scope")
+        let _ = Hashtbl.find (context !current_scope) str in
+        raise (TypeCheckError (str ^ " is already in current scope"))
     with
-    | Hashtbl.Not_found -> ()
+    | Not_found -> ()
 
 (* recurse until entry found, then do check *)
-let err_if_id_not_declared ?(check=(fun a b -> ())) (Identifer str) =
+let err_if_id_not_declared ?(check=(fun a b -> ())) (Identifier str) =
     let rec err_if_id_not_declared' str scope =
         try
-            let (cat, glt) = Hashtbl.find (!scope).context str in
+            let (cat, glt) = Hashtbl.find (context scope) str in
             check cat glt
         with
-        | Hashtbl.Not_found ->
-            (match (!scope).parent with
-            | CsRoot -> raise TypeCheckError (str ^ " not declared")
+        | Not_found ->
+            (match parent scope with
+            | CsRoot -> raise (TypeCheckError (str ^ " not declared"))
             | csn    -> err_if_id_not_declared' str csn)
    in
-   err_if_id_not_declared' str current_scope
+   err_if_id_not_declared' str !current_scope
 
 let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     let check cat glt =
         if cat = T.Type then ()
         else
-            let scat = string_of_vcat cat in
+            let scat = T.string_of_vcat cat in
             let s = (str ^ " is a " ^ scat ^ ", not a Type") in
-            raise TypeCheckError s;
+            raise (TypeCheckError s)
     in
     err_if_id_not_declared ~check id
 
 (* TYPE CHECKER ------------------------------------------------------------------------------------------------- *)
 
-let type_check_prog prog =
+let rec type_check_prog prog =
     match prog with
-    | EmptyProgram      -> true
+    | EmptyProgram      -> ()
     | Program (pkg, ds) -> List.iter type_check_decl ds
 
 and type_check_decl d =
     match d with
     | VariableDeclaration vds                  -> List.iter type_check_vd vds
-    | TypeDeclaration tds                      -> List.iter type_check_td tds
+    | TypeDeclaration tds                      -> () (*List.iter type_check_td tds*)
     | FunctionDeclaration (id, prmrs, tso, ss) -> () (* TODO *)
 
 and type_check_vd (ids, tso, eso) =
@@ -129,47 +138,48 @@ and type_check_vd (ids, tso, eso) =
     let glt =
         match tso, eso with
         | None, None -> (* not possible, parser prevents *)
-            raise TypeCheckParserError "tso and eso both None"
+            raise (TypeCheckParserError "tso and eso both None")
         | Some ts, None ->
             type_check_ts ts
         | None, Some es ->
             let e_glts = List.map type_check_e es in
             let h = List.hd e_glts in
             if (let bs = List.map ((=) h) e_glts in
-               List.fold_left (f acc b -> (acc && b)) true bs)
+               List.fold_left (fun acc b -> (acc && b)) true bs)
             then h
-            else raise TypeCheckError "vardec: explist contains multiple types"
+            else raise (TypeCheckError "vardec: explist contains multiple types")
         | Some ts, Some es ->
             let t_glt = type_check_ts ts in
             let e_glts = List.map type_check_e es in
             if (let bs = List.map ((=) t_glt) e_glts in
-               List.fold_left (f acc b -> (acc && b)) true bs)
+               List.fold_left (fun acc b -> (acc && b)) true bs)
             then t_glt
-            else raise TypeCheckError "vardec: explist type != declared type" in
+            else raise (TypeCheckError "vardec: explist type != declared type") in
     let add_id_to_scope (Identifier str) =
-        Hashtbl.add (!current_scope).context str (T.Variable, glt) in
+        Hashtbl.add (context !current_scope) str (T.Variable, glt) in
     List.iter add_id_to_scope ids
 
 and type_check_ts ts = (* return the checked type *)
-    | IdentifierType ((Identifier str) as idt) ->
+    match ts with
+    | IdentifierType (Identifier str) as idt ->
         err_if_type_not_declared idt;
         T.NamedT str
     | ArrayTypeLiteral (es, ts) ->
         (match es with
         | LitInt i -> ArrayT (i, type_check_ts ts)
-        | _        -> raise TypeCheckParserError "array needs int within '[ ]'")
+        | _        -> raise (TypeCheckParserError "array needs int within '[ ]'"))
     | SliceTypeLiteral ts ->
         SliceT (type_check_ts ts)
-    | StructTypeLiteral stds
+    | StructTypeLiteral stds ->
         let type_check_std (ids, ts) = 
             let strs = List.map (fun (Identifier str) -> str) ids in
-            strs, (type_check_ts ts)
+            (strs, (type_check_ts ts)) in
         StructT (List.map type_check_std stds)
 
 and type_check_td (((Identifier str) as id), ts) =
     err_if_id_in_current_scope id;
     let glt = type_check_ts ts in
-    Hashtbl.add !(current_scope).context str (T.Type, glt)
+    Hashtbl.add (context !current_scope) str (T.Type, glt)
 
 and type_check_e e =
     match e with
@@ -186,10 +196,10 @@ and type_check_e e =
     | Uplus e  -> type_check_e e |> pt_if_rt is_numT nummsg
     | Uminus e -> type_check_e e |> pt_if_rt is_numT nummsg
     | Uxor e   -> type_check_e e |> pt_if_rt is_intT intmsg
-    | Not e    -> type_check_e e |> pt_if_rt is_BoolT "BoolT"
+    | Not e    -> type_check_e e |> pt_if_rt [is_BoolT] "BoolT"
     (* binary expression *)
-    | Or (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_BoolT "BoolT")
-    | And (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_BoolT "BoolT")
+    | Or (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt [is_BoolT] "BoolT")
+    | And (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt [is_BoolT] "BoolT")
     | Eq (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_cmpT cmpmsg)   |> (fun x -> T.BoolT)
     | Neq (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_cmpT cmpmsg)   |> (fun x -> T.BoolT)
     | Gt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.BoolT)
@@ -210,23 +220,23 @@ and type_check_e e =
     (* function calls *)
     | Append (e1, e2) ->
         (match type_check_e e1 with
-        | T.SliceT glt as t -> if glt = type_check_e e2 then t else raise TypeCheckError ""
-        | _ -> raise TypeCheckError "")
+        | T.SliceT glt as t -> if glt = type_check_e e2 then t else raise (TypeCheckError "")
+        | _ -> raise (TypeCheckError ""))
     | Cap e ->
         (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ -> T.IntT
-        | _                           -> raise TypeCheckError "")
+        | _                           -> raise (TypeCheckError ""))
     | Len e ->
-        (match e with
+        (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.IntT
-        | _                                       -> raise TypeCheckError "")
+        | _                                       -> raise (TypeCheckError ""))
     | FunctionCall ((Identifier str as id), es) ->
         let cat, glt = get_vcat_gltype_from_str str in
-        err_if (cat != T.Variable) TypeCheckError (str^" is not a function");
+        (err_if (cat != T.Variable) (TypeCheckError (str^" is not a function"));
         (match glt with
-        | Function (arg_glts, ret_glt) ->
-            err_if (arg_glts != List.map type_check_e es) TypeCheckError ""; ret_glt
-        | _ -> raise TypeCheckError (str^" is not a function"))
+        | T.FunctionT (arg_glts, ret_glt) ->
+            err_if (arg_glts != List.map type_check_e es) (TypeCheckError ""); ret_glt
+        | _ -> raise (TypeCheckError (str^" is not a function"))))
     (* parentheses *)
     | ParenExpression e -> type_check_e e
 
@@ -235,26 +245,26 @@ and pt_if_type_check_eq e1 e2 =
     if t1 = t2 then t1
     else
         let s1, s2 = (T.string_of_glt t1),(T.string_of_glt t2) in
-        raise TypeCheckError (s1 ^ " not equal to " ^ s2)
+        raise (TypeCheckError (s1 ^ " not equal to " ^ s2))
 
 and type_check_idexp idexp =
+    match idexp with
     | Ident str ->
         let cat,glt = (get_vcat_gltype_from_str str) in
-        err_if (cat=T.Type) TypeCheckError "";
-        glt
+        (err_if (cat=T.Type) (TypeCheckError "");
+        glt)
     | Indexed (e1, e2) ->
-        type_check_e e2 |> pt_if_rt is_intT intmsg |> ignore;
+        type_check_e e2 |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
         (match rt (type_check_e e1) with
         | T.SliceT glt | T.ArrayT (_, glt) -> glt
-        | _ -> raise TypeCheckError "")
+        | _ -> raise (TypeCheckError ""))
     | StructAccess (e, str) ->
-        (match (type_check_e e |> pt_if_rt [is_StructT] sctmsg |> rt) with
+        (match (type_check_e e |> (pt_if_rt [is_StructT] sctmsg) |> rt) with
         | T.StructT stds ->
             let glto =
                 let f (strs, glt) = if (List.exists ((=) str) strs) then Some glt else None in
                 List.fold_left (fun acc tup -> if acc != None then acc else f tup) None stds in
             (match glto with
             | Some glt -> glt
-            | None     -> raise TypeCheckError "")
-        | _              -> TypeCheckError "")
-
+            | None     -> raise (TypeCheckError ""))
+        | _  -> raise (TypeCheckError ""))

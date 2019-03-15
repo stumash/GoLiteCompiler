@@ -1,4 +1,4 @@
-let _ =
+let () =
     let lb = Lexing.from_channel stdin in
     try
         let ast = Parse.program Lexer.scanner lb in
