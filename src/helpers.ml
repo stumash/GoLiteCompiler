@@ -15,9 +15,11 @@ exception NotSimpleStatement
 exception MultAsgCannotShorthand
 exception SwitchMultipleDefaults
 exception TypeCheckError of string
+exception TypeCheckParserError of string
 
 let handle_error ?(default="Default") lb = function
     | TypeCheckError str        -> print_error lb @@ "TypeChecker: " ^ str
+    | TypeCheckParserError str  -> print_error lb @@ "TypeChecker: ParserError: " ^ str
     | ExpressionIsNotIdentifier -> print_error lb "Parser: exp is not ident"
     | VarDecIdsLenNeqExpsLen    -> print_error lb "Parser: var. decl. LHS size unequal RHS size"
     | VarDecNeedsTypeOrInit     -> print_error lb "Parser: var. decl. needs type or initializer"
@@ -34,3 +36,6 @@ let ifsome o f =
     match o with
     | None -> ()
     | Some a -> f a
+
+let err_if b err =
+    if b then raise err else ()

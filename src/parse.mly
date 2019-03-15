@@ -12,8 +12,6 @@
     let es_to_ids es =
         List.map e_to_id es
 
-    let err_if b err = if b then raise err else ()
-
     (* raise err if o1 and o2 are None *)
     let err_ifboth_None o1 o2 err =
         match o1,o2 with
