@@ -7,9 +7,9 @@ let () =
             Cactus_stack.print_cs_node Typecheck.root_scope;
             print_endline "OK: printed symbol table"
         with
-        | Cactus_stack.CsRootHasNoContents ->
+        | Cactus_stack.CsRootHasNoContents | Helpers.TypeCheckError _ ->
             Cactus_stack.print_cs_node Typecheck.root_scope;
-            print_endline "OK: printed symbol table"
+            print_endline "OK: printed symbol table BUT typecheck error"
     with
     | Parse.Error -> Helpers.print_error lb "Parser"
     | e           -> Helpers.handle_error lb e ~default:"TypeCheckerDefault"

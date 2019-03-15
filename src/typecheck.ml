@@ -130,7 +130,7 @@ let rec type_check_prog prog =
 and type_check_decl d =
     match d with
     | VariableDeclaration vds                  -> List.iter type_check_vd vds
-    | TypeDeclaration tds                      -> () (*List.iter type_check_td tds*)
+    | TypeDeclaration tds                      -> List.iter type_check_td tds
     | FunctionDeclaration (id, prmrs, tso, ss) -> () (* TODO *)
 
 and type_check_vd (ids, tso, eso) =
@@ -231,6 +231,7 @@ and type_check_e e =
         | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.IntT
         | _                                       -> raise (TypeCheckError ""))
     | FunctionCall ((Identifier str as id), es) ->
+        (* TODO: handle casting!!! *)
         let cat, glt = get_vcat_gltype_from_str str in
         (err_if (cat != T.Variable) (TypeCheckError (str^" is not a function"));
         (match glt with
