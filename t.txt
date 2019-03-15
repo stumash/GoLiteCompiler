@@ -3,4 +3,3 @@ package main
 var a int
 var b int
 type num int
-var b num
