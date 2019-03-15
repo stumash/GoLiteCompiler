@@ -110,6 +110,5 @@ and expression =
 
 and identifier_expression =
   | Ident of string
-  | Blankid
   | Indexed of string * expression
   | StructAccess of string *  identifier_expression

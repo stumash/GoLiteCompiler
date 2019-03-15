@@ -292,9 +292,8 @@ statements :
 
 
 ident_type :
-    | BLANKID                          { Blankid } (*Blank Identifier *)
     | s=IDENT                          { Ident s } (* Normal as is *)
-    | s=IDENT LBRACK i=LIT_INT RBRACK  { Indexed (s, LitInt i) } (* array and slice element access *)
+    | s=IDENT LBRACK e=exp RBRACK  { Indexed (s, e) } (* array and slice element access *)
     | s=IDENT DOT e2=ident_type        { StructAccess (s, e2) } (* Struct element access *)
     ;
 
@@ -411,6 +410,7 @@ expr_switch_case :
 identifier_list :
     | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun str -> Identifier str) ids }
     ;
+
 
 expression_list :
     | es=separated_nonempty_list(COMMA, exp) { es }
