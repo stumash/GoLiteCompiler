@@ -161,7 +161,7 @@ and type_check_td (((Identifier str) as id), ts) =
 and type_check_fd (id, prms, tso, ss) =
     err_if_id_in_current_scope id;
     let new_scope = CsNode {parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in
-    add_child_scope !current_scope new_scope; ()
+    add_child_scope !current_scope new_scope; () (* TODO *)
 
 and type_check_ts ts = (* return the checked type *)
     match ts with
