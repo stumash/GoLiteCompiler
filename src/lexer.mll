@@ -187,7 +187,7 @@ rule scanner = parse
   | lit_rune as s         { mpt "lit_rune(%s)\n" s;   slt (LIT_RUNE s) }
 (* special *)
   | [' ' '\t']            { scanner lexbuf }
-  | '\n'                  { incr_linenum lexbuf;
+  | '\n' | '\r'                  { incr_linenum lexbuf;
                             if is_stmt_end !last_token then
                               ( mpt "%s\n" ";" ; slt SEMICOLON )
                             else scanner lexbuf
