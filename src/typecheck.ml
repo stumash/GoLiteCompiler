@@ -74,7 +74,7 @@ let get_vcat_gltype_from_str str =
 let rt glt =
     let rec rt' glt scope =
         match glt with
-        | T.NamedT str -> 
+        | T.NamedT str ->
             (try rt' (snd (Hashtbl.find (context scope) str)) scope with
             | Not_found ->
                 (match parent scope with
@@ -123,9 +123,9 @@ let rec type_check_prog prog =
 
 and type_check_decl d =
     match d with
-    | VariableDeclaration vds                  -> List.iter type_check_vd vds
-    | TypeDeclaration tds                      -> List.iter type_check_td tds
-    | FunctionDeclaration (id, prmrs, tso, ss) -> () (* TODO *)
+    | VariableDeclaration vds                 -> List.iter type_check_vd vds
+    | TypeDeclaration tds                     -> List.iter type_check_td tds
+    | FunctionDeclaration (id, prms, tso, ss) -> type_check_fd (id, prms, tso, ss)
 
 and type_check_vd (ids, tso, eso) =
     List.iter err_if_id_in_current_scope ids;
@@ -153,6 +153,16 @@ and type_check_vd (ids, tso, eso) =
         Hashtbl.add (context !current_scope) str (T.Variable, glt) in
     List.iter add_id_to_scope ids
 
+and type_check_td (((Identifier str) as id), ts) =
+    err_if_id_in_current_scope id;
+    let glt = type_check_ts ts in
+    Hashtbl.add (context !current_scope) str (T.Type, glt)
+
+and type_check_fd (id, prms, tso, ss) =
+    err_if_id_in_current_scope id;
+    let new_scope = CsNode {parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in
+    add_child_scope !current_scope new_scope; ()
+
 and type_check_ts ts = (* return the checked type *)
     match ts with
     | IdentifierType (Identifier str) as idt ->
@@ -165,15 +175,10 @@ and type_check_ts ts = (* return the checked type *)
     | SliceTypeLiteral ts ->
         SliceT (type_check_ts ts)
     | StructTypeLiteral stds ->
-        let type_check_std (ids, ts) = 
+        let type_check_std (ids, ts) =
             let strs = List.map (fun (Identifier str) -> str) ids in
             (strs, (type_check_ts ts)) in
         StructT (List.map type_check_std stds)
-
-and type_check_td (((Identifier str) as id), ts) =
-    err_if_id_in_current_scope id;
-    let glt = type_check_ts ts in
-    Hashtbl.add (context !current_scope) str (T.Type, glt)
 
 and type_check_e e =
     match e with
@@ -235,19 +240,6 @@ and type_check_e e =
     (* parentheses *)
     | ParenExpression e -> type_check_e e
 
-(* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
-and pt_if_rt fs msg y =
-    let y' = rt y in
-    if List.exists (fun f -> f y') fs then y
-    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg))
-
-and pt_if_type_check_eq e1 e2 =
-    let t1, t2 = (type_check_e e1), (type_check_e e2) in
-    if t1 = t2 then t1
-    else
-        let s1, s2 = (T.string_of_glt t1),(T.string_of_glt t2) in
-        raise (TypeCheckError (s1 ^ " not equal to " ^ s2))
-
 and type_check_idexp idexp =
     match idexp with
     | Ident str ->
@@ -267,5 +259,18 @@ and type_check_idexp idexp =
                 List.fold_left (fun acc tup -> if acc != None then acc else f tup) None stds in
             (match glto with
             | Some glt -> glt
-            | None     -> raise (TypeCheckError "no element named "^str^" in struct, cannot access"))
+            | None     -> raise (TypeCheckError ("no element named "^str^" in struct, cannot access")))
         | _  -> raise (TypeCheckError "struct field access only defined for types resolving to struct"))
+
+(* Pass-Through y If Resolved Type of y returns true in list fs, else error with msg *)
+and pt_if_rt fs msg y =
+    let y' = rt y in
+    if List.exists (fun f -> f y') fs then y
+    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg))
+
+and pt_if_type_check_eq e1 e2 =
+    let t1, t2 = (type_check_e e1), (type_check_e e2) in
+    if t1 = t2 then t1
+    else
+        let s1, s2 = (T.string_of_glt t1),(T.string_of_glt t2) in
+        raise (TypeCheckError (s1 ^ " not equal to " ^ s2))
