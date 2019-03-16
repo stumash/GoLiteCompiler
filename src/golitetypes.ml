@@ -43,7 +43,7 @@ let rec string_of_glt gt =
     | StringT -> "StringT"
     | NamedT str -> "NamedT( " ^ str ^ " )"
     | StructT stds ->
-        "{ " ^ (string_of_strs (List.map string_of_std stds)) ^"}"
+        "struct{ " ^ (string_of_strs (List.map string_of_std stds)) ^"}"
     | ArrayT (i, gt) ->
         "[" ^ (string_of_int i) ^ "]" ^ (string_of_glt gt)
     | SliceT gt ->

@@ -83,12 +83,6 @@ let rt glt =
         | _ -> glt in
     rt' glt !current_scope
 
-(* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
-let pt_if_rt fs msg y =
-    let y' = rt y in
-    if List.exists (fun f -> f y') fs then y
-    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg))
-
 let err_if_id_in_current_scope (Identifier str) =
     try
         let _ = Hashtbl.find (context !current_scope) str in
@@ -220,26 +214,32 @@ and type_check_e e =
     (* function calls *)
     | Append (e1, e2) ->
         (match type_check_e e1 with
-        | T.SliceT glt as t -> if glt = type_check_e e2 then t else raise (TypeCheckError "")
-        | _ -> raise (TypeCheckError ""))
+        | T.SliceT glt as t -> if glt = type_check_e e2 then t else raise (TypeCheckError "elem type != appended type")
+        | _ -> raise (TypeCheckError "cannot append to non-slice"))
     | Cap e ->
         (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ -> T.IntT
-        | _                           -> raise (TypeCheckError ""))
+        | _                           -> raise (TypeCheckError "cap only defined for slice, array"))
     | Len e ->
         (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.IntT
-        | _                                       -> raise (TypeCheckError ""))
+        | _                                       -> raise (TypeCheckError "len only defined for slice, array, string"))
     | FunctionCall ((Identifier str as id), es) ->
         (* TODO: handle casting!!! *)
         let cat, glt = get_vcat_gltype_from_str str in
         (err_if (cat != T.Variable) (TypeCheckError (str^" is not a function"));
         (match glt with
         | T.FunctionT (arg_glts, ret_glt) ->
-            err_if (arg_glts != List.map type_check_e es) (TypeCheckError ""); ret_glt
+            err_if (arg_glts != List.map type_check_e es) (TypeCheckError "args types != expected types"); ret_glt
         | _ -> raise (TypeCheckError (str^" is not a function"))))
     (* parentheses *)
     | ParenExpression e -> type_check_e e
+
+(* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
+and pt_if_rt fs msg y =
+    let y' = rt y in
+    if List.exists (fun f -> f y') fs then y
+    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg))
 
 and pt_if_type_check_eq e1 e2 =
     let t1, t2 = (type_check_e e1), (type_check_e e2) in
@@ -252,13 +252,13 @@ and type_check_idexp idexp =
     match idexp with
     | Ident str ->
         let cat,glt = (get_vcat_gltype_from_str str) in
-        (err_if (cat=T.Type) (TypeCheckError "");
+        (err_if (cat=T.Type) (TypeCheckError (str^" is a Type, not a Variable or Constant"));
         glt)
     | Indexed (e1, e2) ->
-        type_check_e e2 |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
+        type_check_e e2 |> (pt_if_rt is_intT intmsg) |> ignore;
         (match rt (type_check_e e1) with
         | T.SliceT glt | T.ArrayT (_, glt) -> glt
-        | _ -> raise (TypeCheckError ""))
+        | _ -> raise (TypeCheckError "indexing only defined for slice, array"))
     | StructAccess (e, str) ->
         (match (type_check_e e |> (pt_if_rt [is_StructT] sctmsg) |> rt) with
         | T.StructT stds ->
@@ -267,5 +267,5 @@ and type_check_idexp idexp =
                 List.fold_left (fun acc tup -> if acc != None then acc else f tup) None stds in
             (match glto with
             | Some glt -> glt
-            | None     -> raise (TypeCheckError ""))
-        | _  -> raise (TypeCheckError ""))
+            | None     -> raise (TypeCheckError "no element named "^str^" in struct, cannot access"))
+        | _  -> raise (TypeCheckError "struct field access only defined for types resolving to struct"))
