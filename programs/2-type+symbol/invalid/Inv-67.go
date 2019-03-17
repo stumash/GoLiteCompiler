@@ -1,19 +1,18 @@
 package main 
 
-//Valid 
+//InValid 
 //Each case clause opens a new scope 
 
 func f () {
 	var a int ;
 
-	switch b  := 0;  a {
+	switch  a {
 	case 2: {
 		var b int; 
 		var c int ;
 	}
 	case 3 : {
-		var b int ;
-		var c int ;
+		b = 10000;
 	}
 	default : 
 	}
