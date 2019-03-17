@@ -17,7 +17,7 @@ let root_context =
     Hashtbl.add ht "true"    (T.Constant, T.NamedT "bool");
     Hashtbl.add ht "false"   (T.Constant, T.NamedT "bool");
     ht
- (*  *)
+
 let root_scope = CsNode {
     parent = CsRoot;
     children = ref [];
@@ -114,6 +114,32 @@ let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     in
     err_if_id_not_declared ~check id
 
+let add new_scope = 
+    match !current_scope with 
+    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsNode {parent; children; context} -> 
+        children := new_scope :: !children
+
+let create_new_scope () = 
+    (let new_scope = 
+        CsNode { 
+            parent = !current_scope;
+            children = ref [];
+            context = Hashtbl.create 8} in 
+        let () = add new_scope in 
+        current_scope := new_scope)
+
+let get_parent_scope () = 
+    match !current_scope with 
+    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsNode {parent; children; context } -> current_scope := parent
+    
+        
+          
+
+        
+
+
 (* TYPE CHECKER ------------------------------------------------------------------------------------------------- *)
 
 let rec type_check_prog prog =
@@ -125,7 +151,7 @@ and type_check_decl d =
     match d with
     | VariableDeclaration vds                 -> List.iter type_check_vd vds
     | TypeDeclaration tds                     -> List.iter type_check_td tds
-    | FunctionDeclaration (id, prms, tso, ss) -> type_check_fd (id, prms, tso, ss)
+    | FunctionDeclaration (id, prms, tso, ss) -> (*type_check_fd (id, prms, tso, ss)*) ()
 
 and type_check_vd (ids, tso, eso) =
     List.iter err_if_id_in_current_scope ids;
@@ -153,16 +179,6 @@ and type_check_vd (ids, tso, eso) =
         Hashtbl.add (context !current_scope) str (T.Variable, glt) in
     List.iter add_id_to_scope ids
 
-and type_check_td (((Identifier str) as id), ts) =
-    err_if_id_in_current_scope id;
-    let glt = type_check_ts ts in
-    Hashtbl.add (context !current_scope) str (T.Type, glt)
-
-and type_check_fd (id, prms, tso, ss) =
-    err_if_id_in_current_scope id;
-    let new_scope = CsNode {parent=(!current_scope); children=ref []; context=Hashtbl.create 8} in
-    add_child_scope !current_scope new_scope; () (* TODO *)
-
 and type_check_ts ts = (* return the checked type *)
     match ts with
     | IdentifierType (Identifier str) as idt ->
@@ -180,7 +196,12 @@ and type_check_ts ts = (* return the checked type *)
             (strs, (type_check_ts ts)) in
         StructT (List.map type_check_std stds)
 
-and type_check_e e : T.gltype =
+and type_check_td (((Identifier str) as id), ts) =
+    err_if_id_in_current_scope id;
+    let glt = type_check_ts ts in
+    Hashtbl.add (context !current_scope) str (T.Type, glt)
+
+and type_check_e e =
     match e with
     (* literals *)
     | LitInt i -> NamedT "int"
@@ -247,7 +268,7 @@ and type_check_idexp idexp =
         (err_if (cat=T.Type) (TypeCheckError "");
         glt)
     | Indexed (e1, e2) ->
-        type_check_e e2 |> (pt_if_rt is_intT intmsg) |> ignore;
+        type_check_e e2 |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
         (match rt (type_check_e e1) with
         | T.SliceT glt | T.ArrayT (_, glt) -> glt
         | _ -> raise (TypeCheckError "indexing only defined for slice, array"))
@@ -262,42 +283,50 @@ and type_check_idexp idexp =
             | None     -> raise (TypeCheckError ("no element named "^str^" in struct, cannot access")))
         | _ -> raise (TypeCheckError "struct field access only defined for types resolving to struct"))
 
-and type_check_stmt s =
-    match s with
-    | ExpressionStatement e ->
-        (type_check_e e |> ignore);
-        T.Void
-    | AssignmentStatement (es1, aop, es2) ->
-        T.Void (* TODO *)
-    | DeclarationStatement d ->
-        type_check_decl d;
-        T.Void
-    | ShortValDeclaration (ids, es) ->
-        T.Void (* TODO *)
-    | Inc e | Dec e ->
-        (type_check_e e |> (pt_if_rt is_numT nummsg) |> ignore);
-        T.Void
-    | PrintStatement es | PrintlnStatement es ->
-        (match es with
-        | None -> () (* do nothing *)
-        | Some es -> List.iter (fun e -> (type_check_e e) |> ignore) es);
-        T.Void
-    | ReturnStatement e ->
-        type_check_e e
-    | IfStatement ifclause ->
-        T.Void (* TODO *)
-    | SwitchStatement (s, eo, scs) ->
-        T.Void (* TODO *)
-    | ForStatement (s1, eo, s2, ss) ->
-        type_check_for (s1, eo, s2, ss);
-        T.Void
-    | BlockStatements ss ->
+and type_check_stmt s = 
+    match s with 
+    | ExpressionStatement e -> type_check_e e; T.Void 
+(*    | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
+    | ShortValDeclaration (ids, es) -> () (*TO DO*) *)
+    | BlockStatements ss -> 
         create_new_scope ();
-        List.iter (fun s -> type_check_stmt s; ())  ss;
+        List.iter (fun s -> type_check_stmt s; ())  ss; 
         get_parent_scope();
-        T.Void
-    | Break | Continue | EmptyStatement ->
-        T.Void (* do nothing *)
+        T.Void 
+    | DeclarationStatement d -> type_check_decl d; T.Void
+    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); T.Void 
+    | PrintStatement (es) | PrintlnStatement (es) ->
+        (match es with 
+        | None -> T.Void (*Do nothing *)
+        | Some es -> List.iter (fun e ->  type_check_e e; ()) es; T.Void 
+        ); T.Void           
+    | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
+    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss); T.Void
+    | IfStatement ifclause -> (*type_check_ifst ifclause ;*) T.Void 
+    | _ -> raise (TypeCheckError "")
+
+(*Subject to testing *)
+and type_check_for f = 
+    match f with 
+    | (EmptyStatement, None, EmptyStatement, ss) -> 
+        create_new_scope ();
+        List.iter (fun s -> type_check_stmt s; ()) ss;
+        get_parent_scope()
+    | (EmptyStatement, Some e, EmptyStatement, ss) -> 
+        type_check_e e |> pt_if_rt [is_BoolT] "Bool";  
+        create_new_scope();
+        List.iter (fun s -> type_check_stmt s; ()) ss;
+        get_parent_scope()
+    | (i, Some e, p , ss) -> 
+        create_new_scope ();
+        type_check_stmt i;
+        type_check_e e |> pt_if_rt [is_BoolT] "Bool"; 
+        type_check_stmt p; 
+        create_new_scope () ;
+        List.iter  (fun s -> type_check_stmt s; ()) ss;
+        get_parent_scope();
+        get_parent_scope()
+    | _ -> raise (TypeCheckError "")
 
 (* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
 and pt_if_rt fs msg y =
