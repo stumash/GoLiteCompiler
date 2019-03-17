@@ -8,16 +8,16 @@ module T = Golitetypes
 let root_context =
     let ht : (string, (T.vcat * T.gltype)) Hashtbl.t = Hashtbl.create 8 in
     (* builtin types *)
-    Hashtbl.add ht "int"     (T.Type, T.IntT);
-    Hashtbl.add ht "float64" (T.Type, T.FloatT);
-    Hashtbl.add ht "bool"    (T.Type, T.BoolT);
-    Hashtbl.add ht "rune"    (T.Type, T.RuneT);
-    Hashtbl.add ht "string"  (T.Type, T.StringT);
+    Hashtbl.add ht "int"     (T.Type,     T.IntT);
+    Hashtbl.add ht "float64" (T.Type,     T.FloatT);
+    Hashtbl.add ht "bool"    (T.Type,     T.BoolT);
+    Hashtbl.add ht "rune"    (T.Type,     T.RuneT);
+    Hashtbl.add ht "string"  (T.Type,     T.StringT);
     (* literals *)
-    Hashtbl.add ht "true"  (T.Constant, T.NamedT "bool");
-    Hashtbl.add ht "false" (T.Constant, T.NamedT "bool");
+    Hashtbl.add ht "true"    (T.Constant, T.NamedT "bool");
+    Hashtbl.add ht "false"   (T.Constant, T.NamedT "bool");
     ht
-
+ (*  *)
 let root_scope = CsNode {
     parent = CsRoot;
     children = ref [];
@@ -42,14 +42,14 @@ let current_scope = ref global_scope
 
 (* HELPERS -------------------------------------------------------------------------------------------- *)
 
-let is_IntT t    = match t with | T.IntT -> true | _ -> false
-let is_FloatT t  = match t with | T.FloatT -> true | _ -> false
-let is_BoolT t   = match t with | T.BoolT -> true | _ -> false
-let is_RuneT t   = match t with | T.RuneT -> true | _ -> false
-let is_StringT t = match t with | T.StringT -> true | _ -> false
-let is_StructT t = match t with | T.StructT _ -> true | _ -> false
-let is_SliceT t  = match t with | T.SliceT _ -> true | _ -> false
-let is_ArrayT t  = match t with | T.ArrayT (_,_) -> true | _ -> false
+let is_IntT t      = match t with | T.IntT -> true            | _ -> false
+let is_FloatT t    = match t with | T.FloatT -> true          | _ -> false
+let is_BoolT t     = match t with | T.BoolT -> true           | _ -> false
+let is_RuneT t     = match t with | T.RuneT -> true           | _ -> false
+let is_StringT t   = match t with | T.StringT -> true         | _ -> false
+let is_StructT t   = match t with | T.StructT _ -> true       | _ -> false
+let is_SliceT t    = match t with | T.SliceT _ -> true        | _ -> false
+let is_ArrayT t    = match t with | T.ArrayT (_,_) -> true    | _ -> false
 let is_FunctionT t = match t with | T.FunctionT (_,_) -> true | _ -> false
 
 let is_intT = [is_IntT; is_RuneT]
@@ -160,7 +160,7 @@ and type_check_td (((Identifier str) as id), ts) =
 
 and type_check_fd (id, prms, tso, ss) =
     err_if_id_in_current_scope id;
-    let new_scope = CsNode {parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in
+    let new_scope = CsNode {parent=(!current_scope); children=ref []; context=Hashtbl.create 8} in
     add_child_scope !current_scope new_scope; () (* TODO *)
 
 and type_check_ts ts = (* return the checked type *)
@@ -180,7 +180,7 @@ and type_check_ts ts = (* return the checked type *)
             (strs, (type_check_ts ts)) in
         StructT (List.map type_check_std stds)
 
-and type_check_e e =
+and type_check_e e : T.gltype =
     match e with
     (* literals *)
     | LitInt i -> NamedT "int"
@@ -244,7 +244,7 @@ and type_check_idexp idexp =
     match idexp with
     | Ident str ->
         let cat,glt = (get_vcat_gltype_from_str str) in
-        (err_if (cat=T.Type) (TypeCheckError (str^" is a Type, not a Variable or Constant"));
+        (err_if (cat=T.Type) (TypeCheckError "");
         glt)
     | Indexed (e1, e2) ->
         type_check_e e2 |> (pt_if_rt is_intT intmsg) |> ignore;
@@ -260,9 +260,46 @@ and type_check_idexp idexp =
             (match glto with
             | Some glt -> glt
             | None     -> raise (TypeCheckError ("no element named "^str^" in struct, cannot access")))
-        | _  -> raise (TypeCheckError "struct field access only defined for types resolving to struct"))
+        | _ -> raise (TypeCheckError "struct field access only defined for types resolving to struct"))
 
-(* Pass-Through y If Resolved Type of y returns true in list fs, else error with msg *)
+and type_check_stmt s =
+    match s with
+    | ExpressionStatement e ->
+        (type_check_e e |> ignore);
+        T.Void
+    | AssignmentStatement (es1, aop, es2) ->
+        T.Void (* TODO *)
+    | DeclarationStatement d ->
+        type_check_decl d;
+        T.Void
+    | ShortValDeclaration (ids, es) ->
+        T.Void (* TODO *)
+    | Inc e | Dec e ->
+        (type_check_e e |> (pt_if_rt is_numT nummsg) |> ignore);
+        T.Void
+    | PrintStatement es | PrintlnStatement es ->
+        (match es with
+        | None -> () (* do nothing *)
+        | Some es -> List.iter (fun e -> (type_check_e e) |> ignore) es);
+        T.Void
+    | ReturnStatement e ->
+        type_check_e e
+    | IfStatement ifclause ->
+        T.Void (* TODO *)
+    | SwitchStatement (s, eo, scs) ->
+        T.Void (* TODO *)
+    | ForStatement (s1, eo, s2, ss) ->
+        type_check_for (s1, eo, s2, ss);
+        T.Void
+    | BlockStatements ss ->
+        create_new_scope ();
+        List.iter (fun s -> type_check_stmt s; ())  ss;
+        get_parent_scope();
+        T.Void
+    | Break | Continue | EmptyStatement ->
+        T.Void (* do nothing *)
+
+(* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
 and pt_if_rt fs msg y =
     let y' = rt y in
     if List.exists (fun f -> f y') fs then y

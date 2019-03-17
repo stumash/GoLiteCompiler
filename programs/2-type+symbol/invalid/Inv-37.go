@@ -1,6 +1,10 @@
-package main
+package main 
 
-type num int
+//Invalid
+//Checks if exp list length of RHS is equal to LHS 
 
-func num() {
+func f () {
+	var a1, a2 int ;
+
+	a1, a2 := 4, 5, 6
 }
