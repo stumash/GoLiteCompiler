@@ -315,7 +315,8 @@ and type_check_stmt s =
         ); T.Void           
     | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
     | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss); T.Void
-    | IfStatement ifclause -> (*type_check_ifst ifclause ;*) T.Void 
+    | IfStatement ifclause -> type_check_ifst ifclause ; T.Void 
+    | SwitchStatement (s, eo, scl) -> (*type_check_switch (s, eo, scl);*) T.Void 
     | _ -> raise (TypeCheckError "")
 
 (*Subject to testing *)
@@ -340,3 +341,36 @@ and type_check_for f =
         get_parent_scope();
         get_parent_scope()
     | _ -> raise (TypeCheckError "")
+
+and type_check_ifst ic = 
+    match ic with 
+    | If (s, e, ss, None) -> 
+        create_new_scope();
+        type_check_stmt s;
+        type_check_e e|> pt_if_rt [is_BoolT] "Bool";
+        create_new_scope ();
+        List.iter (fun s -> type_check_stmt s; () ) ss;
+        get_parent_scope();
+        get_parent_scope();
+        T.Void            
+    | If (s, e, ss, Some els) ->
+        create_new_scope();
+        type_check_stmt s;
+        type_check_e e|> pt_if_rt [is_BoolT] "Bool";
+        create_new_scope();
+        List.iter (fun s -> type_check_stmt s; () ) ss;
+        get_parent_scope();
+        get_parent_scope();
+        (match els with 
+        | Elseif ifs -> type_check_ifst ifs; T.Void 
+        | Else ss-> 
+            create_new_scope();
+            List.iter (fun s -> type_check_stmt s; () ) ss; 
+            get_parent_scope();
+            T.Void );
+            T.Void
+(*
+and type_check_switch sw = 
+    match sw with 
+    | (s, None , swcl ) -> 
+*)      
