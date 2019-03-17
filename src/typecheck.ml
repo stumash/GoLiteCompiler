@@ -120,6 +120,27 @@ let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     in
     err_if_id_not_declared ~check id
 
+let create_new_scope = 
+    (*Create a new CsNode*)
+    (*Add that node to children of currentscope *)
+    (*Set current scope to that node *)
+    let new_scope = 
+        CsNode { 
+            parent = !current_scope;
+            children = ref [];
+            context = Hashtbl.create 8} in 
+        let () = 
+        match !current_scope with 
+        | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+        | CsNode {parent; children; context} -> 
+            children := new_scope :: !children  in 
+        current_scope := new_scope 
+        
+          
+
+        
+
+
 (* TYPE CHECKER ------------------------------------------------------------------------------------------------- *)
 
 let rec type_check_prog prog =
@@ -269,3 +290,29 @@ and type_check_idexp idexp =
             | Some glt -> glt
             | None     -> raise (TypeCheckError ""))
         | _  -> raise (TypeCheckError ""))
+(*
+and type_check_stmt s = 
+    match s with 
+    | ExpressionStatement e -> type_check_e e; ( ) 
+    | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
+    | ShortValDeclaration (ids, es) -> ( ) (*TO DO*)
+    | DeclarationStatement d -> type_check_decl d; ( )  
+    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); ( ) 
+    | PrintStatement es | PrintlnStatement es ->
+        (match es with 
+        | Some es -> List.iter type_check_e es 
+        | None -> () (*Do nothing *));  ( )
+    | Break | Continue | EmptyStatement -> ( ) (*Do nothing as trivial *)
+    | ForStatement (s, eo, s, ss) as f -> type_check_for f
+    | _ -> () 
+
+and type_check_for f = 
+    match f with 
+    | (EmptyStatement, None, EmptyStatement, ss) -> ( )
+    | (EmptyStatement, Some e, EmptyStatement, ss) -> type_check_e e |> pt_ifrt [is_BoolT]; ( ) (*TODO FOR STATEMENT BLOCK*)
+    | (i, Some e, p , ss) -> 
+        type_check_stmt i;
+        type_check_e e |> pt_ifrt [is_BoolT]; 
+        type_check_stmt p; ( ) (*TODO FOR STATEMENT BLOCK *)
+    | _ -> raise (TypeCheckError "")
+*)
