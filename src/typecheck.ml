@@ -120,21 +120,26 @@ let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     in
     err_if_id_not_declared ~check id
 
-let create_new_scope = 
-    (*Create a new CsNode*)
-    (*Add that node to children of currentscope *)
-    (*Set current scope to that node *)
-    let new_scope = 
+let add new_scope = 
+    match !current_scope with 
+    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsNode {parent; children; context} -> 
+        children := new_scope :: !children
+
+let create_new_scope () = 
+    (let new_scope = 
         CsNode { 
             parent = !current_scope;
             children = ref [];
             context = Hashtbl.create 8} in 
-        let () = 
-        match !current_scope with 
-        | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
-        | CsNode {parent; children; context} -> 
-            children := new_scope :: !children  in 
-        current_scope := new_scope 
+        let () = add new_scope in 
+        current_scope := new_scope)
+
+let get_parent_scope () = 
+    match !current_scope with 
+    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsNode {parent; children; context } -> current_scope := parent
+    
         
           
 
@@ -251,7 +256,7 @@ and type_check_e e =
         (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.IntT
         | _                                       -> raise (TypeCheckError ""))
-    | FunctionCall ((Identifier str as id), es) ->
+    | FunctionCall ((Identifier str ), es) ->
         (* TODO: handle casting!!! *)
         let cat, glt = get_vcat_gltype_from_str str in
         (err_if (cat != T.Variable) (TypeCheckError (str^" is not a function"));
@@ -290,29 +295,48 @@ and type_check_idexp idexp =
             | Some glt -> glt
             | None     -> raise (TypeCheckError ""))
         | _  -> raise (TypeCheckError ""))
-(*
+
 and type_check_stmt s = 
     match s with 
-    | ExpressionStatement e -> type_check_e e; ( ) 
-    | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
-    | ShortValDeclaration (ids, es) -> ( ) (*TO DO*)
-    | DeclarationStatement d -> type_check_decl d; ( )  
-    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); ( ) 
-    | PrintStatement es | PrintlnStatement es ->
+    | ExpressionStatement e -> type_check_e e; T.Void 
+(*    | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
+    | ShortValDeclaration (ids, es) -> () (*TO DO*) *)
+    | BlockStatements ss -> 
+        create_new_scope ();
+        List.iter (fun s -> type_check_stmt s; ())  ss; 
+        get_parent_scope();
+        T.Void 
+    | DeclarationStatement d -> type_check_decl d; T.Void
+    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); T.Void 
+    | PrintStatement (es) | PrintlnStatement (es) ->
         (match es with 
-        | Some es -> List.iter type_check_e es 
-        | None -> () (*Do nothing *));  ( )
-    | Break | Continue | EmptyStatement -> ( ) (*Do nothing as trivial *)
-    | ForStatement (s, eo, s, ss) as f -> type_check_for f
-    | _ -> () 
+        | None -> T.Void (*Do nothing *)
+        | Some es -> List.iter (fun e ->  type_check_e e; ()) es; T.Void 
+        ); T.Void           
+    | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
+    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss); T.Void
+    | IfStatement ifclause -> (*type_check_ifst ifclause ;*) T.Void 
+    | _ -> raise (TypeCheckError "")
 
+(*Subject to testing *)
 and type_check_for f = 
     match f with 
-    | (EmptyStatement, None, EmptyStatement, ss) -> ( )
-    | (EmptyStatement, Some e, EmptyStatement, ss) -> type_check_e e |> pt_ifrt [is_BoolT]; ( ) (*TODO FOR STATEMENT BLOCK*)
+    | (EmptyStatement, None, EmptyStatement, ss) -> 
+        create_new_scope ();
+        List.iter (fun s -> type_check_stmt s; ()) ss;
+        get_parent_scope()
+    | (EmptyStatement, Some e, EmptyStatement, ss) -> 
+        type_check_e e |> pt_if_rt [is_BoolT] "Bool";  
+        create_new_scope();
+        List.iter (fun s -> type_check_stmt s; ()) ss;
+        get_parent_scope()
     | (i, Some e, p , ss) -> 
+        create_new_scope ();
         type_check_stmt i;
-        type_check_e e |> pt_ifrt [is_BoolT]; 
-        type_check_stmt p; ( ) (*TODO FOR STATEMENT BLOCK *)
+        type_check_e e |> pt_if_rt [is_BoolT] "Bool"; 
+        type_check_stmt p; 
+        create_new_scope () ;
+        List.iter  (fun s -> type_check_stmt s; ()) ss;
+        get_parent_scope();
+        get_parent_scope()
     | _ -> raise (TypeCheckError "")
-*)
