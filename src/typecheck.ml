@@ -145,9 +145,9 @@ let rec type_check_prog prog =
 
 and type_check_decl d =
     match d with
-    | VariableDeclaration vds                  -> List.iter type_check_vd vds
-    | TypeDeclaration tds                      -> List.iter type_check_td tds
-    | FunctionDeclaration (id, prmrs, tso, ss) -> type_check_fd(id, prmrs, tso, ss)
+    | VariableDeclaration vds                 -> List.iter type_check_vd vds
+    | TypeDeclaration tds                     -> List.iter type_check_td tds
+    | FunctionDeclaration (id, prms, tso, ss) -> type_check_fd(id, prms, tso, ss)
 
 and type_check_vd (ids, tso, eso) =
     List.iter err_if_id_in_current_scope ids;
