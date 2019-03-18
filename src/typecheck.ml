@@ -265,11 +265,11 @@ and type_check_e e =
         | T.Variable ->
             (match glt with
             | T.FunctionT (arg_glts, ret_glt) ->
-                err_if (arg_glts != List.map type_check_e es) (TypeCheckError "arg types given != expected"); ret_glt
+                err_if (arg_glts <> List.map type_check_e es) (TypeCheckError "arg types given != expected"); ret_glt
             | _ -> raise (TypeCheckError (str^" is not a function")))
         | T.Type -> (* type cast *)
             err_if (1 != List.length es) (TypeCheckError "cannot cast multiple variables at once");
-            if (rt glt) = rt (type_check_e (List.hd es)) then glt
+            if (rt glt) = rt (type_check_e (List.hd es)) then NamedT str
             else raise (TypeCheckError "cannot cast between two types that don't resolve to same type")
         | _ -> raise (TypeCheckError (str^" is not a function (or even a type to cast with)")))
     (* parentheses *)
@@ -311,7 +311,7 @@ and type_check_stmt s =
         if (List.length es1)!=(List.length es2) then
         raise (TypeCheckError "multiple assignment size mismatch") else ();
         let f (e1,e2) =
-            if (type_check_e e1)!=(type_check_e e2) then
+            if (type_check_e e1) <> (type_check_e e2) then
             raise (TypeCheckError "assignment type mismatch") else () in
         List.iter f (zip es1 es2);
         if (List.length es1 != 1) && (aop != ASG) then
