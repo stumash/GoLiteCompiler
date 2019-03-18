@@ -76,7 +76,7 @@ let get_vcat_gltype_from_str str =
 let rt glt =
     let rec rt' glt scope =
         match glt with
-        | T.NamedT str -> 
+        | T.NamedT str ->
             (try rt' (snd (Hashtbl.find (context scope) str)) scope with
             | Not_found ->
                 (match parent scope with
@@ -122,17 +122,17 @@ let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     in
     err_if_id_not_declared ~check id
 
-let create_new_scope () = 
-    let add new_scope = 
-        match !current_scope with 
+let create_new_scope () =
+    let add new_scope =
+        match !current_scope with
         | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
-        | CsNode {parent; children; context} -> 
+        | CsNode {parent; children; context} ->
             children := new_scope :: !children in
-    let new_scope = CsNode { parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in 
+    let new_scope = CsNode { parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in
     add new_scope; current_scope := new_scope
 
-let get_parent_scope () = 
-    match !current_scope with 
+let get_parent_scope () =
+    match !current_scope with
     | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
     | CsNode {parent; children; context } -> current_scope := parent
 
@@ -187,7 +187,7 @@ and type_check_ts ts = (* return the checked type *)
     | SliceTypeLiteral ts ->
         SliceT (type_check_ts ts)
     | StructTypeLiteral stds ->
-        let type_check_std (ids, ts) = 
+        let type_check_std (ids, ts) =
             let strs = List.map (fun (Identifier str) -> str) ids in
             (strs, (type_check_ts ts)) in
         StructT (List.map type_check_std stds)
@@ -304,9 +304,9 @@ and type_check_idexp idexp =
             | None     -> raise (TypeCheckError ""))
         | _  -> raise (TypeCheckError ""))
 
-and type_check_stmt s = 
-    match s with 
-    | ExpressionStatement e -> type_check_e e; T.Void 
+and type_check_stmt s =
+    match s with
+    | ExpressionStatement e -> type_check_e e; T.Void
     | AssignmentStatement (es1, aop, es2) ->
         if (List.length es1)!=(List.length es2) then
         raise (TypeCheckError "multiple assignment size mismatch") else ();
@@ -319,50 +319,50 @@ and type_check_stmt s =
         T.Void
 (*  | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
     | ShortValDeclaration (ids, es) -> () (* TODO *) *)
-    | BlockStatements ss -> 
+    | BlockStatements ss ->
         create_new_scope ();
-        List.iter (fun s -> type_check_stmt s; ())  ss; 
+        List.iter (fun s -> type_check_stmt s; ())  ss;
         get_parent_scope();
-        T.Void 
+        T.Void
     | DeclarationStatement d -> type_check_decl d; T.Void
-    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); T.Void 
+    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); T.Void
     | PrintStatement (es) | PrintlnStatement (es) ->
-        (match es with 
+        (match es with
         | None -> T.Void (*Do nothing *)
-        | Some es -> List.iter (fun e ->  type_check_e e; ()) es; T.Void 
-        ); T.Void           
+        | Some es -> List.iter (fun e ->  type_check_e e; ()) es; T.Void
+        ); T.Void
     | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
     | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss); T.Void
-    | IfStatement ifclause -> type_check_ifst ifclause ; T.Void 
-    | SwitchStatement (s, eo, scl) -> (*type_check_switch (s, eo, scl);*) T.Void 
+    | IfStatement ifclause -> type_check_ifst ifclause ; T.Void
+    | SwitchStatement (s, eo, scl) -> (*type_check_switch (s, eo, scl);*) T.Void
     | _ -> raise (TypeCheckError "")
 
 (*Subject to testing *)
-and type_check_for f = 
-    match f with 
-    | (EmptyStatement, None, EmptyStatement, ss) -> 
+and type_check_for f =
+    match f with
+    | (EmptyStatement, None, EmptyStatement, ss) ->
         create_new_scope ();
         List.iter (fun s -> type_check_stmt s; ()) ss;
         get_parent_scope()
-    | (EmptyStatement, Some e, EmptyStatement, ss) -> 
-        type_check_e e |> pt_if_rt [is_BoolT] "Bool";  
+    | (EmptyStatement, Some e, EmptyStatement, ss) ->
+        type_check_e e |> pt_if_rt [is_BoolT] "Bool";
         create_new_scope();
         List.iter (fun s -> type_check_stmt s; ()) ss;
         get_parent_scope()
-    | (i, Some e, p , ss) -> 
+    | (i, Some e, p , ss) ->
         create_new_scope ();
         type_check_stmt i;
-        type_check_e e |> pt_if_rt [is_BoolT] "Bool"; 
-        type_check_stmt p; 
+        type_check_e e |> pt_if_rt [is_BoolT] "Bool";
+        type_check_stmt p;
         create_new_scope () ;
         List.iter  (fun s -> type_check_stmt s; ()) ss;
         get_parent_scope();
         get_parent_scope()
     | _ -> raise (TypeCheckError "")
 
-and type_check_ifst ic = 
-    match ic with 
-    | If (s, e, ss, None) -> 
+and type_check_ifst ic =
+    match ic with
+    | If (s, e, ss, None) ->
         create_new_scope();
         type_check_stmt s;
         type_check_e e|> pt_if_rt [is_BoolT] "Bool";
@@ -370,7 +370,7 @@ and type_check_ifst ic =
         List.iter (fun s -> type_check_stmt s; () ) ss;
         get_parent_scope();
         get_parent_scope();
-        T.Void            
+        T.Void
     | If (s, e, ss, Some els) ->
         create_new_scope();
         type_check_stmt s;
@@ -379,30 +379,30 @@ and type_check_ifst ic =
         List.iter (fun s -> type_check_stmt s; () ) ss;
         get_parent_scope();
         get_parent_scope();
-        (match els with 
-        | Elseif ifs -> type_check_ifst ifs; T.Void 
-        | Else ss-> 
+        (match els with
+        | Elseif ifs -> type_check_ifst ifs; T.Void
+        | Else ss->
             create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss; 
+            List.iter (fun s -> type_check_stmt s; () ) ss;
             get_parent_scope();
             T.Void );
             T.Void
 
-and type_check_switch sw = 
-    match sw with 
-    | (s, None , swcl ) -> 
+and type_check_switch sw =
+    match sw with
+    | (s, None , swcl ) ->
         create_new_scope();
         type_check_stmt s;
-        (match swcl with 
-        | Default ss -> 
+        (match swcl with
+        | Default ss ->
             create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss; 
+            List.iter (fun s -> type_check_stmt s; () ) ss;
             get_parent_scope();
             T.Void;
-        | Case (el, ss) -> 
+        | Case (el, ss) ->
             List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "Bool"; ()) el;
-            create_new_scope();   
-            List.iter (fun s -> type_check_stmt s; () ) ss; 
+            create_new_scope();
+            List.iter (fun s -> type_check_stmt s; () ) ss;
             get_parent_scope();
             T.Void);
             get_parent_scope();
@@ -411,17 +411,17 @@ and type_check_switch sw =
         create_new_scope();
         type_check_stmt s;
         type_check_e e |> pt_if_rt is_cmpT cmpmsg;
-        (match swcl with 
-        | Default ss -> 
+        (match swcl with
+        | Default ss ->
             create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss; 
+            List.iter (fun s -> type_check_stmt s; () ) ss;
             get_parent_scope();
             T.Void;
-        | Case (el, ss) -> 
+        | Case (el, ss) ->
             List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
             create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss; 
+            List.iter (fun s -> type_check_stmt s; () ) ss;
             get_parent_scope();
             T.Void);
-            get_parent_scope(); 
+            get_parent_scope();
             T.Void
