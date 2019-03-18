@@ -307,8 +307,18 @@ and type_check_idexp idexp =
 and type_check_stmt s = 
     match s with 
     | ExpressionStatement e -> type_check_e e; T.Void 
-(*    | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
-    | ShortValDeclaration (ids, es) -> () (*TO DO*) *)
+    | AssignmentStatement (es1, aop, es2) ->
+        if (List.length es1)!=(List.length es2) then
+        raise (TypeCheckError "multiple assignment size mismatch") else ();
+        let f (e1,e2) =
+            if (type_check_e e1)!=(type_check_e e2) then
+            raise (TypeCheckError "assignment type mismatch") else () in
+        List.iter f (zip es1 es2);
+        if (List.length es1 != 1) && (aop != ASG) then
+        raise (TypeCheckError "cannot use shorthand operators in multiple assignment") else ();
+        T.Void
+(*  | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
+    | ShortValDeclaration (ids, es) -> () (* TODO *) *)
     | BlockStatements ss -> 
         create_new_scope ();
         List.iter (fun s -> type_check_stmt s; ())  ss; 
