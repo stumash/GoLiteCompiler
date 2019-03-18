@@ -39,6 +39,11 @@ let () =
 (* initialized to global scope, the only child of the root scope *)
 let current_scope = ref global_scope
 
+let curr_ret_val = ref T.Void 
+
+let tag_ret = ref 0
+let temp_ret = ref T.Void  
+
 (* HELPERS -------------------------------------------------------------------------------------------- *)
 
 let zip l1 l2 = List.map2 (fun a b -> a,b) l1 l2
@@ -207,13 +212,23 @@ and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
     let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
     Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type));
     create_new_scope ();
+    curr_ret_val := ret_type;
     let add_ids_to_scope (ids, glt) =
         List.iter (fun (Identifier str) -> Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
     List.iter add_ids_to_scope (zip idss prm_types);
-    List.iter (fun s -> type_check_stmt s; ()) ss;
-    (*if ret_type <> !(type_check_ss ss) then raise (TypeCheckError "Return type not match") else ();*)
-    (* TODO extract return type, should make function for statement list *)
-
+    (*List.iter (fun s -> type_check_stmt s; ()) ss;*)
+    if ret_type <> !(type_check_ss ss) then 
+       (if (!temp_ret = ret_type) && (!tag_ret = 0) then temp_ret := T.Void 
+        else raise (TypeCheckError "Return type not match"))             
+    else if !tag_ret = 2 then
+                (tag_ret := 0;
+                temp_ret := T.Void; 
+                raise (TypeCheckError "Return type not match"))    
+    else if !tag_ret = 1 then 
+                ( tag_ret := 0;
+                temp_ret := T.Void; )
+    else ();
+    
     get_parent_scope();
 
 and type_check_e e =
@@ -317,6 +332,10 @@ and type_check_stmt s =
         if (List.length es1)!=(List.length es2) then
         raise (TypeCheckError "multiple assignment size mismatch") else ();
         let f (e1,e2) =
+            (match e1 with 
+            | IdentifierExpression i -> () 
+            | _ -> raise (TypeCheckError "Cannot assign to an expression anything"));
+            
             if (type_check_e e1) <> (type_check_e e2) then
             raise (TypeCheckError "assignment type mismatch") else () in
         List.iter f (zip es1 es2);
@@ -339,8 +358,10 @@ and type_check_stmt s =
             match id_type with 
             | T.Void -> 
                 if_at_least_one := 1;
-                let glt = type_check_e e in
-                Hashtbl.add (context !current_scope) id (T.Variable, glt); 
+                let glt = type_check_e e in ();
+                (match glt with 
+                | T.Void -> raise (TypeCheckError "Void type cannot be assigned")
+                | _ -> Hashtbl.add (context !current_scope) id (T.Variable, glt)); 
                 ();
             | _ as glt -> if glt <> type_check_e e then 
                             raise (TypeCheckError "assignment type mismatch") else () in
@@ -358,11 +379,11 @@ and type_check_stmt s =
     | PrintStatement (es) | PrintlnStatement (es) ->
         (match es with
         | None -> T.Void (*Do nothing *)
-        | Some es -> List.iter (fun e ->  type_check_e e; ()) es; T.Void
+        | Some es -> List.iter (fun e ->  type_check_e e |> (pt_if_rt (is_ordT @ [is_BoolT]) "Cannot print"); ()) es; T.Void
         ); T.Void
     | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
-    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss); T.Void
-    | IfStatement ifclause -> type_check_ifst ifclause ; T.Void
+    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss)
+    | IfStatement ifclause -> type_check_ifst ifclause 
     | SwitchStatement (s, eo, scl) -> type_check_switch (s, eo, scl); T.Void
     | _ -> raise (TypeCheckError "")
 
@@ -371,22 +392,28 @@ and type_check_for f =
     match f with
     | (EmptyStatement, None, EmptyStatement, ss) ->
         create_new_scope ();
-        List.iter (fun s -> type_check_stmt s; ()) ss;
-        get_parent_scope()
+        (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
+        let tp = type_check_ss ss in 
+        get_parent_scope();
+        if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
     | (EmptyStatement, Some e, EmptyStatement, ss) ->
         type_check_e e |> pt_if_rt [is_BoolT] "Bool";
         create_new_scope();
-        List.iter (fun s -> type_check_stmt s; ()) ss;
-        get_parent_scope()
+        (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
+        let tp = type_check_ss ss in
+        get_parent_scope();
+        if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
     | (i, Some e, p , ss) ->
         create_new_scope ();
         type_check_stmt i;
         type_check_e e |> pt_if_rt [is_BoolT] "Bool";
         type_check_stmt p;
         create_new_scope () ;
-        List.iter  (fun s -> type_check_stmt s; ()) ss;
+        (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
+        let tp = type_check_ss ss in 
         get_parent_scope();
-        get_parent_scope()
+        get_parent_scope();
+        if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
     | _ -> raise (TypeCheckError "")
 
 and type_check_ifst ic =
@@ -396,24 +423,29 @@ and type_check_ifst ic =
         type_check_stmt s;
         type_check_e e|> pt_if_rt [is_BoolT] "Bool";
         create_new_scope ();
-        List.iter (fun s -> type_check_stmt s; () ) ss;
+        let tp = type_check_ss ss in 
         get_parent_scope();
         get_parent_scope();
+        if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
         
     | If (s, e, ss, Some els) ->
         create_new_scope();
         type_check_stmt s;
         type_check_e e|> pt_if_rt [is_BoolT] "Bool";
         create_new_scope();
-        List.iter (fun s -> type_check_stmt s; () ) ss;
+        let tp = type_check_ss ss in 
         get_parent_scope();
         get_parent_scope();
+        if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void);
         (match els with
         | Elseif ifs -> type_check_ifst ifs;
         | Else ss->
-            create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss;
-            get_parent_scope();
+            (create_new_scope();
+            let tp1 = type_check_ss ss in 
+                get_parent_scope();
+                if !tp1 = !curr_ret_val then !tp1 else (tr_asn tp; T.Void);
+                (*print_int !tag_ret;*)
+                 )
              );
             
 
@@ -426,17 +458,18 @@ and type_check_switch sw =
             fun swc -> match swc with
             | Default ss ->
                 create_new_scope();
-                List.iter (fun s -> type_check_stmt s ; () ) ss;
+                let tp = type_check_ss ss in 
                 get_parent_scope();
-                ();
+                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); () 
             | Case (el, ss) ->
                 List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "Bool"; ()) el;
                 create_new_scope();
-                List.iter (fun s -> type_check_stmt s; () ) ss;
+                let tp = type_check_ss ss in 
                 get_parent_scope();
+                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void);
                 ()) swcl;
-            get_parent_scope();
-            T.Void
+                get_parent_scope();
+                T.Void
     | (s, Some e, swcl) ->
         create_new_scope();
         type_check_stmt s;
@@ -444,14 +477,16 @@ and type_check_switch sw =
         List.iter (fun swc -> match swc with
             | Default ss ->
                 create_new_scope();
-                List.iter (fun s -> type_check_stmt s; () ) ss;
+                let tp = type_check_ss ss in 
                 get_parent_scope();
-                ();
+                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); ()
             | Case (el, ss) ->
                 List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
                 create_new_scope();
-                List.iter (fun s -> type_check_stmt s; () ) ss;
+                let tp = type_check_ss ss in 
                 get_parent_scope();
+                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void);
+                
                 ()) swcl;
             get_parent_scope();
             T.Void
@@ -461,3 +496,8 @@ and  type_check_ss ss =
     let ret_val = ref T.Void in
     List.iteri (fun i s -> let glt = type_check_stmt s in if i=(List.length ss)-1 then ret_val:=glt else ()) ss;
     ret_val
+and tr_asn t =
+    match !t with 
+    | T.Void -> tag_ret := 1
+    | _ -> tag_ret := 2
+    
