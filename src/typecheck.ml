@@ -334,7 +334,7 @@ and type_check_stmt s =
     | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
     | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss); T.Void
     | IfStatement ifclause -> type_check_ifst ifclause ; T.Void
-    | SwitchStatement (s, eo, scl) -> (*type_check_switch (s, eo, scl);*) T.Void
+    | SwitchStatement (s, eo, scl) -> type_check_switch (s, eo, scl); T.Void
     | _ -> raise (TypeCheckError "")
 
 (*Subject to testing *)
@@ -393,35 +393,36 @@ and type_check_switch sw =
     | (s, None , swcl ) ->
         create_new_scope();
         type_check_stmt s;
-        (match swcl with
-        | Default ss ->
-            create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss;
-            get_parent_scope();
-            T.Void;
-        | Case (el, ss) ->
-            List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "Bool"; ()) el;
-            create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss;
-            get_parent_scope();
-            T.Void);
+        List.iter (
+            fun swc -> match swc with
+            | Default ss ->
+                create_new_scope();
+                List.iter (fun s -> type_check_stmt s ; () ) ss;
+                get_parent_scope();
+                ();
+            | Case (el, ss) ->
+                List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "Bool"; ()) el;
+                create_new_scope();
+                List.iter (fun s -> type_check_stmt s; () ) ss;
+                get_parent_scope();
+                ()) swcl;
             get_parent_scope();
             T.Void
     | (s, Some e, swcl) ->
         create_new_scope();
         type_check_stmt s;
         type_check_e e |> pt_if_rt is_cmpT cmpmsg;
-        (match swcl with
-        | Default ss ->
-            create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss;
-            get_parent_scope();
-            T.Void;
-        | Case (el, ss) ->
-            List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
-            create_new_scope();
-            List.iter (fun s -> type_check_stmt s; () ) ss;
-            get_parent_scope();
-            T.Void);
+        List.iter (fun swc -> match swc with
+            | Default ss ->
+                create_new_scope();
+                List.iter (fun s -> type_check_stmt s; () ) ss;
+                get_parent_scope();
+                ();
+            | Case (el, ss) ->
+                List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
+                create_new_scope();
+                List.iter (fun s -> type_check_stmt s; () ) ss;
+                get_parent_scope();
+                ()) swcl;
             get_parent_scope();
             T.Void
