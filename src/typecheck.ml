@@ -249,24 +249,29 @@ and type_check_e e =
     (* function calls *)
     | Append (e1, e2) ->
         (match type_check_e e1 with
-        | T.SliceT glt as t -> if glt = type_check_e e2 then t else raise (TypeCheckError "")
-        | _ -> raise (TypeCheckError ""))
+        | T.SliceT glt as t -> if glt = type_check_e e2 then t else raise (TypeCheckError "appended type != slice type")
+        | _ -> raise (TypeCheckError "cannot append to non-slice"))
     | Cap e ->
         (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ -> T.IntT
-        | _                           -> raise (TypeCheckError ""))
+        | _                           -> raise (TypeCheckError "cap only defined for array, slice"))
     | Len e ->
         (match type_check_e e with
         | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.IntT
-        | _                                       -> raise (TypeCheckError ""))
+        | _                                       -> raise (TypeCheckError "len only defined for array, slice, string"))
     | FunctionCall ((Identifier str ), es) ->
-        (* TODO: handle casting!!! *)
         let cat, glt = get_vcat_gltype_from_str str in
-        (err_if (cat != T.Variable) (TypeCheckError (str^" is not a function"));
-        (match glt with
-        | T.FunctionT (arg_glts, ret_glt) ->
-            err_if (arg_glts != List.map type_check_e es) (TypeCheckError ""); ret_glt
-        | _ -> raise (TypeCheckError (str^" is not a function"))))
+        (match cat with
+        | T.Variable ->
+            (match glt with
+            | T.FunctionT (arg_glts, ret_glt) ->
+                err_if (arg_glts != List.map type_check_e es) (TypeCheckError "arg types given != expected"); ret_glt
+            | _ -> raise (TypeCheckError (str^" is not a function")))
+        | T.Type -> (* type cast *)
+            err_if (1 != List.length es) (TypeCheckError "cannot cast multiple variables at once");
+            if (rt glt) = rt (type_check_e (List.hd es)) then glt
+            else raise (TypeCheckError "cannot cast between two types that don't resolve to same type")
+        | _ -> raise (TypeCheckError (str^" is not a function (or even a type to cast with)")))
     (* parentheses *)
     | ParenExpression e -> type_check_e e
 
