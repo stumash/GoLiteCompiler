@@ -36,14 +36,13 @@ let () =
     | CsNode { parent; children; context } ->
         children := global_scope :: !children
 
-
 (* initialized to global scope, the only child of the root scope *)
 let current_scope = ref global_scope
 
 (* HELPERS -------------------------------------------------------------------------------------------- *)
 
 let zip l1 l2 = List.map2 (fun a b -> a,b) l1 l2
-let unzip xys = List.fold_right (fun (x,y) (acc1,acc2) -> (x::acc1,y::acc2)) xys ([],[]);;
+let unzip xys = List.fold_right (fun (x,y) (acc1,acc2) -> (x::acc1,y::acc2)) xys ([],[])
 
 let is_IntT t    = match t with | T.IntT -> true | _ -> false
 let is_FloatT t  = match t with | T.FloatT -> true | _ -> false
@@ -123,13 +122,12 @@ let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     in
     err_if_id_not_declared ~check id
 
-let add new_scope = 
-    match !current_scope with 
-    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
-    | CsNode {parent; children; context} -> 
-        children := new_scope :: !children
-
 let create_new_scope () = 
+    let add new_scope = 
+        match !current_scope with 
+        | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+        | CsNode {parent; children; context} -> 
+            children := new_scope :: !children in
     let new_scope = CsNode { parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in 
     add new_scope; current_scope := new_scope
 
@@ -137,12 +135,6 @@ let get_parent_scope () =
     match !current_scope with 
     | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
     | CsNode {parent; children; context } -> current_scope := parent
-    
-        
-          
-
-        
-
 
 (* TYPE CHECKER ------------------------------------------------------------------------------------------------- *)
 
