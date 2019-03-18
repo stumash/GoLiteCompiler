@@ -42,6 +42,9 @@ let current_scope = ref global_scope
 
 (* HELPERS -------------------------------------------------------------------------------------------- *)
 
+let zip l1 l2 = List.map2 (fun a b -> a,b) l1 l2
+let unzip xys = List.fold_right (fun (x,y) (acc1,acc2) -> (x::acc1,y::acc2)) xys ([],[]);;
+
 let is_IntT t    = match t with | T.IntT -> true | _ -> false
 let is_FloatT t  = match t with | T.FloatT -> true | _ -> false
 let is_BoolT t   = match t with | T.BoolT -> true | _ -> false
@@ -127,13 +130,8 @@ let add new_scope =
         children := new_scope :: !children
 
 let create_new_scope () = 
-    (let new_scope = 
-        CsNode { 
-            parent = !current_scope;
-            children = ref [];
-            context = Hashtbl.create 8} in 
-        let () = add new_scope in 
-        current_scope := new_scope)
+    let new_scope = CsNode { parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in 
+    add new_scope; current_scope := new_scope
 
 let get_parent_scope () = 
     match !current_scope with 
@@ -206,6 +204,19 @@ and type_check_td (((Identifier str) as id), ts) =
     err_if_id_in_current_scope id;
     let glt = type_check_ts ts in
     Hashtbl.add (context !current_scope) str (T.Type, glt)
+
+and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
+    err_if_id_in_current_scope id;
+    let idss, tss = unzip prms in
+    let prm_types = List.map type_check_ts tss in
+    let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
+    Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type));
+    create_new_scope ();
+    let add_ids_to_scope (ids, glt) =
+        List.iter (fun (Identifier str) -> Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
+    List.iter add_ids_to_scope (zip idss prm_types);
+    List.iter (fun s -> type_check_stmt s; ()) ss
+    (* TODO extract return type, should make function for statement list *)
 
 and type_check_e e =
     match e with
@@ -407,5 +418,3 @@ and type_check_switch sw =
             T.Void);
             get_parent_scope(); 
             T.Void
-
-        
