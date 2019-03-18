@@ -99,22 +99,24 @@ let err_if_id_in_current_scope (Identifier str) =
     | Not_found -> ()
 
 (* recurse until entry found, then do check *)
-let err_if_id_not_declared ?(check=(fun a b -> ())) (Identifier str) =
+let err_if_id_not_declared ?f:(op=0) ?(check=(fun a b -> b)) (Identifier str) =
     let rec err_if_id_not_declared' str scope =
         try
             let (cat, glt) = Hashtbl.find (context scope) str in
             check cat glt
         with
         | Not_found ->
-            (match parent scope with
-            | CsRoot -> raise (TypeCheckError (str ^ " not declared"))
-            | csn    -> err_if_id_not_declared' str csn)
+            (match op with 
+            | 0 -> (match parent scope with
+                    | CsRoot -> raise (TypeCheckError (str ^ " not declared"))
+                    | csn    -> err_if_id_not_declared' str csn)
+            | 1 -> T.Void )
    in
    err_if_id_not_declared' str !current_scope
 
 let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
     let check cat glt =
-        if cat = T.Type then ()
+        if cat = T.Type then glt
         else
             let scat = T.string_of_vcat cat in
             let s = (str ^ " is a " ^ scat ^ ", not a Type") in
@@ -135,6 +137,7 @@ let get_parent_scope () =
     match !current_scope with
     | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
     | CsNode {parent; children; context } -> current_scope := parent
+
 
 (* TYPE CHECKER ------------------------------------------------------------------------------------------------- *)
 
@@ -207,8 +210,11 @@ and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
     let add_ids_to_scope (ids, glt) =
         List.iter (fun (Identifier str) -> Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
     List.iter add_ids_to_scope (zip idss prm_types);
-    List.iter (fun s -> type_check_stmt s; ()) ss
+    List.iter (fun s -> type_check_stmt s; ()) ss;
+    (*if ret_type <> !(type_check_ss ss) then raise (TypeCheckError "Return type not match") else ();*)
     (* TODO extract return type, should make function for statement list *)
+
+    get_parent_scope();
 
 and type_check_e e =
     match e with
@@ -317,8 +323,31 @@ and type_check_stmt s =
         if (List.length es1 != 1) && (aop != ASG) then
         raise (TypeCheckError "cannot use shorthand operators in multiple assignment") else ();
         T.Void
-(*  | ReturnStatement e -> ( ) (*To be combined with functions so wait*)
-    | ShortValDeclaration (ids, es) -> () (* TODO *) *)
+    | ReturnStatement eo -> 
+        (match eo with 
+        | None -> T.Void
+        | Some e -> type_check_e e)
+    | ShortValDeclaration (ids, es) -> 
+        if (List.length ids)!=(List.length es) then
+        raise (TypeCheckError "multiple assignment size mismatch") else ();
+        List.iter (fun e -> type_check_e e; ()) es;
+        let if_at_least_one = ref 0 in
+        (let f (Identifier id, e) = 
+            let id_type  = 
+                let check cat glt = glt in
+                    err_if_id_not_declared ~f:1 ~check:check (Identifier id) in
+            match id_type with 
+            | T.Void -> 
+                if_at_least_one := 1;
+                let glt = type_check_e e in
+                Hashtbl.add (context !current_scope) id (T.Variable, glt); 
+                ();
+            | _ as glt -> if glt <> type_check_e e then 
+                            raise (TypeCheckError "assignment type mismatch") else () in
+        List.iter f (zip ids es) );
+        if !if_at_least_one = 0 then 
+            raise (TypeCheckError "At least one of the expressions on the LHS must be defined") else ();
+        T.Void            
     | BlockStatements ss ->
         create_new_scope ();
         List.iter (fun s -> type_check_stmt s; ())  ss;
@@ -370,7 +399,7 @@ and type_check_ifst ic =
         List.iter (fun s -> type_check_stmt s; () ) ss;
         get_parent_scope();
         get_parent_scope();
-        T.Void
+        
     | If (s, e, ss, Some els) ->
         create_new_scope();
         type_check_stmt s;
@@ -380,13 +409,13 @@ and type_check_ifst ic =
         get_parent_scope();
         get_parent_scope();
         (match els with
-        | Elseif ifs -> type_check_ifst ifs; T.Void
+        | Elseif ifs -> type_check_ifst ifs;
         | Else ss->
             create_new_scope();
             List.iter (fun s -> type_check_stmt s; () ) ss;
             get_parent_scope();
-            T.Void );
-            T.Void
+             );
+            
 
 and type_check_switch sw =
     match sw with
@@ -426,3 +455,9 @@ and type_check_switch sw =
                 ()) swcl;
             get_parent_scope();
             T.Void
+
+
+and  type_check_ss ss =
+    let ret_val = ref T.Void in
+    List.iteri (fun i s -> let glt = type_check_stmt s in if i=(List.length ss)-1 then ret_val:=glt else ()) ss;
+    ret_val
