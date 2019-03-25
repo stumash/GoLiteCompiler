@@ -109,7 +109,7 @@ do
 						STATUS=-1
 					fi
 
-					if [[ $OUTPUT != "OK" || $STATUS != 0 ]]
+					if [[ $OUTPUT != "OK"* || $STATUS != 0 ]]
 					then
 						PREV_SUCCESS=0
 					fi

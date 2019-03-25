@@ -180,7 +180,7 @@ and type_check_vd (ids, tso, eso) =
             then t_glt
             else raise (TypeCheckError "vardec: explist type != declared type") in
     let add_id_to_scope (Identifier str) =
-        Hashtbl.add (context !current_scope) str (T.Variable, glt) in
+        if str = "_" then () else Hashtbl.add (context !current_scope) str (T.Variable, glt) in
     List.iter add_id_to_scope ids
 
 and type_check_ts ts = (* return the checked type *)
@@ -207,26 +207,38 @@ and type_check_td (((Identifier str) as id), ts) =
 
 and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
     err_if_id_in_current_scope id;
+    let g = (match Identifier str with 
+    | Identifier "init" | Identifier "main" -> 
+        (match prms , tso with
+        |  [] , None -> () ;
+        | _, _ -> raise (TypeCheckError "Init and main types should not have return or any parameters") ); ();
+    | _ -> ();) in 
+    create_new_scope ();
     let idss, tss = unzip prms in
     let prm_types = List.map type_check_ts tss in
     let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
     Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type));
-    create_new_scope ();
+   
     curr_ret_val := ret_type;
     let add_ids_to_scope (ids, glt) =
-        List.iter (fun (Identifier str) -> Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
+        List.iter (fun (Identifier str) -> if str = "_" then () else err_if_id_in_current_scope (Identifier str); Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
     List.iter add_ids_to_scope (zip idss prm_types);
     (*List.iter (fun s -> type_check_stmt s; ()) ss;*)
     if ret_type <> !(type_check_ss ss) then 
-       (if (!temp_ret = ret_type) && (!tag_ret = 0) then temp_ret := T.Void 
+       (if (!temp_ret = ret_type) && (!tag_ret = 0) then (temp_ret := T.Void;) 
         else raise (TypeCheckError "Return type not match"))             
+    (*Now it matches the return type --> Now to check if there is any conflict of return types *)
     else if !tag_ret = 2 then
-                (tag_ret := 0;
-                temp_ret := T.Void; 
-                raise (TypeCheckError "Return type not match"))    
+        (tag_ret := 0;
+        temp_ret := T.Void; 
+        raise (TypeCheckError "Return type not match"))    
     else if !tag_ret = 1 then 
-                ( tag_ret := 0;
-                temp_ret := T.Void; )
+        ( tag_ret := 0;
+        temp_ret := T.Void; )
+    else if !tag_ret = 3 then
+        (tag_ret := 0;
+        temp_ret := T.Void;
+        raise (TypeCheckError "Return types at places do not match the return type of fucntion");)
     else ();
     
     get_parent_scope();
@@ -357,11 +369,12 @@ and type_check_stmt s =
                     err_if_id_not_declared ~f:1 ~check:check (Identifier id) in
             match id_type with 
             | T.Void -> 
-                if_at_least_one := 1;
+                if id = "_" then () else 
+                (if_at_least_one := 1;
                 let glt = type_check_e e in ();
                 (match glt with 
                 | T.Void -> raise (TypeCheckError "Void type cannot be assigned")
-                | _ -> Hashtbl.add (context !current_scope) id (T.Variable, glt)); 
+                | _ -> Hashtbl.add (context !current_scope) id (T.Variable, glt));); 
                 ();
             | _ as glt -> if glt <> type_check_e e then 
                             raise (TypeCheckError "assignment type mismatch") else () in
@@ -414,7 +427,16 @@ and type_check_for f =
         get_parent_scope();
         get_parent_scope();
         if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
-    | _ -> raise (TypeCheckError "")
+    (*TO ADD HERE ANOTHER CASE (stmt, None, None)*)
+    | (i, None , EmptyStatement , ss) ->
+        create_new_scope();
+        type_check_stmt i;
+        create_new_scope();
+        let tp = type_check_ss ss in 
+        get_parent_scope();
+        get_parent_scope();
+        if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void) 
+    | _ -> raise (TypeCheckError "G")
 
 and type_check_ifst ic =
     match ic with
@@ -437,6 +459,7 @@ and type_check_ifst ic =
         get_parent_scope();
         get_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void);
+        (*print_int !tag_ret; T.Void;*)
         (match els with
         | Elseif ifs -> type_check_ifst ifs;
         | Else ss->
@@ -444,8 +467,8 @@ and type_check_ifst ic =
             let tp1 = type_check_ss ss in 
                 get_parent_scope();
                 if !tp1 = !curr_ret_val then !tp1 else (tr_asn tp; T.Void);
-                (*print_int !tag_ret;*)
-                 )
+                (*print_int !tag_ret; T.Void;*)
+                )
              );
             
 
@@ -498,6 +521,6 @@ and  type_check_ss ss =
     ret_val
 and tr_asn t =
     match !t with 
-    | T.Void -> tag_ret := 1
-    | _ -> tag_ret := 2
+    | T.Void -> if (!tag_ret = 0) then tag_ret := 1 else if (!tag_ret = 2) then tag_ret := 3 else ();
+    | _ -> if(!tag_ret = 0) then tag_ret := 2  else if (!tag_ret = 1) then tag_ret := 3 else ();
     
