@@ -225,7 +225,7 @@ and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
     List.iter add_ids_to_scope (zip idss prm_types);
     (*List.iter (fun s -> type_check_stmt s; ()) ss;*)
     if ret_type <> !(type_check_ss ss) then 
-       (if (!temp_ret = ret_type) && (!tag_ret = 0) then (temp_ret := T.Void;) 
+       (if ((!temp_ret = ret_type) && (!tag_ret = 0)) then (temp_ret := T.Void;) 
         else raise (TypeCheckError "Return type not match"))             
     (*Now it matches the return type --> Now to check if there is any conflict of return types *)
     else if !tag_ret = 2 then
