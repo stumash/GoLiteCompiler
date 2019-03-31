@@ -331,7 +331,7 @@ and type_check_idexp idexp =
         | T.StructT stds ->
             let glto =
                 let f (strs, glt) = if (List.exists ((=) str) strs) then Some glt else None in
-                List.fold_left (fun acc tup -> if acc != None then acc else f tup) None stds in
+                List.fold_left (fun acc tup -> if acc <> None then acc else f tup) None stds in
             (match glto with
             | Some glt -> glt
             | None     -> raise (TypeCheckError ""))
@@ -341,17 +341,16 @@ and type_check_stmt s =
     match s with
     | ExpressionStatement e -> type_check_e e; T.Void
     | AssignmentStatement (es1, aop, es2) ->
-        if (List.length es1)!=(List.length es2) then
+        if (List.length es1)<>(List.length es2) then
         raise (TypeCheckError "multiple assignment size mismatch") else ();
         let f (e1,e2) =
             (match e1 with 
             | IdentifierExpression i -> () 
             | _ -> raise (TypeCheckError "Cannot assign to an expression anything"));
-            
             if (type_check_e e1) <> (type_check_e e2) then
             raise (TypeCheckError "assignment type mismatch") else () in
         List.iter f (zip es1 es2);
-        if (List.length es1 != 1) && (aop != ASG) then
+        if (List.length es1 <> 1) && (aop <> ASG) then
         raise (TypeCheckError "cannot use shorthand operators in multiple assignment") else ();
         T.Void
     | ReturnStatement eo -> 
@@ -359,7 +358,7 @@ and type_check_stmt s =
         | None -> T.Void
         | Some e -> type_check_e e)
     | ShortValDeclaration (ids, es) -> 
-        if (List.length ids)!=(List.length es) then
+        if (List.length ids)<>(List.length es) then
         raise (TypeCheckError "multiple assignment size mismatch") else ();
         List.iter (fun e -> type_check_e e; ()) es;
         let if_at_least_one = ref 0 in
