@@ -406,7 +406,7 @@ and type_check_for f =
         get_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
     | (EmptyStatement, Some e, EmptyStatement, ss) ->
-        type_check_e e |> pt_if_rt [is_BoolT] "Bool";
+        type_check_e e |> pt_if_rt [is_BoolT] "BoolT";
         create_new_scope();
         (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
         let tp = type_check_stmts ss in
@@ -415,7 +415,7 @@ and type_check_for f =
     | (i, Some e, p , ss) ->
         create_new_scope ();
         type_check_stmt i;
-        type_check_e e |> pt_if_rt [is_BoolT] "Bool";
+        type_check_e e |> pt_if_rt [is_BoolT] "BoolT";
         type_check_stmt p;
         create_new_scope () ;
         (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
@@ -439,7 +439,7 @@ and type_check_ifst ic =
     | If (s, e, ss, None) ->
         create_new_scope();
         type_check_stmt s;
-        type_check_e e|> pt_if_rt [is_BoolT] "Bool";
+        type_check_e e|> pt_if_rt [is_BoolT] "BoolT";
         create_new_scope ();
         let tp = type_check_stmts ss in 
         get_parent_scope();
@@ -449,7 +449,7 @@ and type_check_ifst ic =
     | If (s, e, ss, Some els) ->
         create_new_scope();
         type_check_stmt s;
-        type_check_e e|> pt_if_rt [is_BoolT] "Bool";
+        type_check_e e|> pt_if_rt [is_BoolT] "BoolT";
         create_new_scope();
         let tp = type_check_stmts ss in 
         get_parent_scope();
@@ -481,7 +481,7 @@ and type_check_switch sw =
                 get_parent_scope();
                 if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); () 
             | Case (el, ss) ->
-                List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "Bool"; ()) el;
+                List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "BoolT"; ()) el;
                 create_new_scope();
                 let tp = type_check_stmts ss in 
                 get_parent_scope();
