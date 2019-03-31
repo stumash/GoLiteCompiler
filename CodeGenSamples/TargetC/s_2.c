@@ -8,7 +8,7 @@ struct { int x; int y; } func1 (struct { int x; int y; } a) {
 }
 
 void main () {
-    struct { int x; int y }a, b;    
+    struct { int x; int y; }a, b;    
 
     a.x = 10;
     a.y= 10;

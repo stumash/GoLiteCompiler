@@ -158,7 +158,10 @@ and type_check_decl d =
     | FunctionDeclaration (id, prms, tso, ss) -> type_check_fd(id, prms, tso, ss)
 
 and type_check_vd (ids, tso, eso) =
-    List.iter err_if_id_in_current_scope ids;
+    List.iter (fun (Identifier str) -> 
+                        (match str with 
+                        | "main" | "init" -> raise (TypeCheckError "init and main cannot be used for var declarations")
+                        | _ -> err_if_id_in_current_scope (Identifier str)); ();) ids;
     let glt =
         match tso, eso with
         | None, None -> (* not possible, parser prevents *)
@@ -201,24 +204,30 @@ and type_check_ts ts = (* return the checked type *)
         StructT (List.map type_check_std stds)
 
 and type_check_td (((Identifier str) as id), ts) =
-    err_if_id_in_current_scope id;
+    (match str with 
+    | "main" | "init" -> raise (TypeCheckError "init and main cannot be used for type declarations")
+    | _ -> err_if_id_in_current_scope (Identifier str));
     let glt = type_check_ts ts in
     Hashtbl.add (context !current_scope) str (T.Type, glt)
 
 and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
-    err_if_id_in_current_scope id;
-    let g = (match Identifier str with 
-    | Identifier "init" | Identifier "main" -> 
+   
+    (match Identifier str with 
+    | Identifier "init" -> 
         (match prms , tso with
-        |  [] , None -> () ;
-        | _, _ -> raise (TypeCheckError "Init and main types should not have return or any parameters") ); ();
-    | _ -> ();) in 
-    create_new_scope ();
+        |  [] , None -> () 
+        | _, _ -> raise (TypeCheckError "Init and main types should not have return or any parameters") ); ()
+    | Identifier "main" ->
+        (match prms , tso with
+        |  [] , None -> err_if_id_in_current_scope id; () 
+        | _, _ -> raise (TypeCheckError "Init and main types should not have return or any parameters") ); ()
+    | _ ->  err_if_id_in_current_scope id; ());
+    
     let idss, tss = unzip prms in
     let prm_types = List.map type_check_ts tss in
     let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
     Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type));
-   
+    create_new_scope ();
     curr_ret_val := ret_type;
     let add_ids_to_scope (ids, glt) =
         List.iter (fun (Identifier str) -> if str = "_" then () else err_if_id_in_current_scope (Identifier str); Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
@@ -318,8 +327,10 @@ and pt_if_type_check_eq e1 e2 =
 and type_check_idexp idexp =
     match idexp with
     | Ident str ->
-        let cat,glt = (get_vcat_gltype_from_str str) in
-        (err_if (cat=T.Type) (TypeCheckError "");
+        (let cat,glt = (get_vcat_gltype_from_str str) in
+        (match glt with 
+        | FunctionT (para, ret) -> raise ( TypeCheckError "Cannot index function calls")
+        | _ -> (err_if (cat=T.Type) (TypeCheckError "")));
         glt)
     | Indexed (e1, e2) ->
         type_check_e e2 |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
@@ -362,21 +373,25 @@ and type_check_stmt s =
         raise (TypeCheckError "multiple assignment size mismatch") else ();
         List.iter (fun e -> type_check_e e; ()) es;
         let if_at_least_one = ref 0 in
-        (let f (Identifier id, e) = 
+        (let f (Identifier str as id, e) = 
             let id_type  = 
                 let check cat glt = glt in
-                    err_if_id_not_declared ~f:1 ~check:check (Identifier id) in
+                    err_if_id_not_declared ~f:1 ~check:check id in
             match id_type with 
             | T.Void -> 
-                if id = "_" then () else 
+                if str = "_" then () else 
                 (if_at_least_one := 1;
                 let glt = type_check_e e in ();
                 (match glt with 
                 | T.Void -> raise (TypeCheckError "Void type cannot be assigned")
-                | _ -> Hashtbl.add (context !current_scope) id (T.Variable, glt));); 
+                | _ -> Hashtbl.add (context !current_scope) str (T.Variable, glt));); 
                 ();
-            | _ as glt -> if glt <> type_check_e e then 
-                            raise (TypeCheckError "assignment type mismatch") else () in
+            | _ as glt ->
+                if (List.length (List.filter ((=)id) ids)) > 1 then
+                    raise (TypeCheckError "Shrothadn not allowed")
+                else if glt <> type_check_e e then 
+                    raise (TypeCheckError "assignment type mismatch")
+                else () in
         List.iter f (zip ids es) );
         if !if_at_least_one = 0 then 
             raise (TypeCheckError "At least one of the expressions on the LHS must be defined") else ();
