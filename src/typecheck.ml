@@ -224,7 +224,7 @@ and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
         List.iter (fun (Identifier str) -> if str = "_" then () else err_if_id_in_current_scope (Identifier str); Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
     List.iter add_ids_to_scope (zip idss prm_types);
     (*List.iter (fun s -> type_check_stmt s; ()) ss;*)
-    if ret_type <> !(type_check_ss ss) then 
+    if ret_type <> !(type_check_stmts ss) then 
        (if ((!temp_ret = ret_type) && (!tag_ret = 0)) then (temp_ret := T.Void;) 
         else raise (TypeCheckError "Return type not match"))             
     (*Now it matches the return type --> Now to check if there is any conflict of return types *)
@@ -405,14 +405,14 @@ and type_check_for f =
     | (EmptyStatement, None, EmptyStatement, ss) ->
         create_new_scope ();
         (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
-        let tp = type_check_ss ss in 
+        let tp = type_check_stmts ss in 
         get_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
     | (EmptyStatement, Some e, EmptyStatement, ss) ->
         type_check_e e |> pt_if_rt [is_BoolT] "Bool";
         create_new_scope();
         (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
-        let tp = type_check_ss ss in
+        let tp = type_check_stmts ss in
         get_parent_scope();
         if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
     | (i, Some e, p , ss) ->
@@ -422,7 +422,7 @@ and type_check_for f =
         type_check_stmt p;
         create_new_scope () ;
         (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
-        let tp = type_check_ss ss in 
+        let tp = type_check_stmts ss in 
         get_parent_scope();
         get_parent_scope();
         if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
@@ -431,7 +431,7 @@ and type_check_for f =
         create_new_scope();
         type_check_stmt i;
         create_new_scope();
-        let tp = type_check_ss ss in 
+        let tp = type_check_stmts ss in 
         get_parent_scope();
         get_parent_scope();
         if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void) 
@@ -444,7 +444,7 @@ and type_check_ifst ic =
         type_check_stmt s;
         type_check_e e|> pt_if_rt [is_BoolT] "Bool";
         create_new_scope ();
-        let tp = type_check_ss ss in 
+        let tp = type_check_stmts ss in 
         get_parent_scope();
         get_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
@@ -454,7 +454,7 @@ and type_check_ifst ic =
         type_check_stmt s;
         type_check_e e|> pt_if_rt [is_BoolT] "Bool";
         create_new_scope();
-        let tp = type_check_ss ss in 
+        let tp = type_check_stmts ss in 
         get_parent_scope();
         get_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void);
@@ -463,7 +463,7 @@ and type_check_ifst ic =
         | Elseif ifs -> type_check_ifst ifs;
         | Else ss->
             (create_new_scope();
-            let tp1 = type_check_ss ss in 
+            let tp1 = type_check_stmts ss in 
                 get_parent_scope();
                 if !tp1 = !curr_ret_val then !tp1 else (tr_asn tp; T.Void);
                 (*print_int !tag_ret; T.Void;*)
@@ -480,13 +480,13 @@ and type_check_switch sw =
             fun swc -> match swc with
             | Default ss ->
                 create_new_scope();
-                let tp = type_check_ss ss in 
+                let tp = type_check_stmts ss in 
                 get_parent_scope();
                 if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); () 
             | Case (el, ss) ->
                 List.iter (fun e -> type_check_e e |> pt_if_rt [is_BoolT] "Bool"; ()) el;
                 create_new_scope();
-                let tp = type_check_ss ss in 
+                let tp = type_check_stmts ss in 
                 get_parent_scope();
                 if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void);
                 ()) swcl;
@@ -499,13 +499,13 @@ and type_check_switch sw =
         List.iter (fun swc -> match swc with
             | Default ss ->
                 create_new_scope();
-                let tp = type_check_ss ss in 
+                let tp = type_check_stmts ss in 
                 get_parent_scope();
                 if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); ()
             | Case (el, ss) ->
                 List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
                 create_new_scope();
-                let tp = type_check_ss ss in 
+                let tp = type_check_stmts ss in 
                 get_parent_scope();
                 if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void);
                 
@@ -513,11 +513,15 @@ and type_check_switch sw =
             get_parent_scope();
             T.Void
 
+and type_check_stmts ss =
+    let last_i = (List.length ss)-1 in
+    let f (i,glt) s =
+        let next_glt = type_check_stmt s in
+        if next_glt <> T.Void && i <> last_i then
+            raise (TypeCheckError "dead code, return statement not last")
+        else (i+1,next_glt) in
+    ref (snd (List.fold_left f (0,T.Void) ss))
 
-and  type_check_ss ss =
-    let ret_val = ref T.Void in
-    List.iteri (fun i s -> let glt = type_check_stmt s in if i=(List.length ss)-1 then ret_val:=glt else ()) ss;
-    ret_val
 and tr_asn t =
     match !t with 
     | T.Void -> if (!tag_ret = 0) then tag_ret := 1 else if (!tag_ret = 2) then tag_ret := 3 else ();
