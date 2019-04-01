@@ -41,3 +41,10 @@ let ifsome o f =
 
 let err_if b err =
     if b then raise err else ()
+
+let dup_exists xs =
+  let rec f acc xs =
+      match xs with
+      | h1::(h2::_ as t) -> if h1 = h2 then true else f acc t
+      | _ -> acc in
+  f false (List.sort compare xs)

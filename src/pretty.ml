@@ -52,10 +52,10 @@ and pp_id (Identifier str) =
 (* type_spec *)
 and pp_tp tp =
     match tp with
-    | IdentifierType (Identifier str) -> p str
-    | ArrayTypeLiteral (e, tp)        -> p "["; pp_exp e; p "]"; pp_tp tp
-    | StructTypeLiteral prms          -> p "{\n"; List.iter (fun prm -> pp_prm prm; p "\n") prms; p "}\n"
-    | SliceTypeLiteral tp             -> p "[]"; pp_tp tp
+    | IdentifierType id        -> pp_id id
+    | ArrayTypeLiteral (e, tp) -> p "["; pp_exp e; p "]"; pp_tp tp
+    | StructTypeLiteral stds   -> p "{\n"; List.iter (fun (id,tp) -> pp_id id; p " "; pp_tp tp; p "\n") stds; p "}\n"
+    | SliceTypeLiteral tp      -> p "[]"; pp_tp tp
 
 (* function paramters *)
 and pp_prms (Parameters prms) =

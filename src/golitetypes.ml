@@ -12,7 +12,7 @@ type gltype =
     | RuneT
     | StringT
     | NamedT of string
-    | StructT of (string list * gltype) list
+    | StructT of (string * gltype) list
     | ArrayT of int * gltype
     | SliceT of gltype
     | FunctionT of gltype list * gltype
@@ -53,5 +53,5 @@ let rec string_of_glt gt =
         "(" ^ (string_of_strs strs) ^ ") -> " ^ (string_of_glt gt)
     | Void -> "Void"
 
-and string_of_std (strs, gt) =
-    (string_of_strs strs) ^ (string_of_glt gt) ^ "; "
+and string_of_std (str, gt) =
+    str ^ " " ^ (string_of_glt gt) ^ "; "
