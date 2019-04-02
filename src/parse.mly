@@ -2,6 +2,7 @@
     (* Add to contents of generated parse.ml *)
 
     open Tree
+    open Weeder
     open Helpers
 
     let e_to_id = function

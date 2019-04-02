@@ -1,7 +1,9 @@
+
 let _ =
     let lb = Lexing.from_channel stdin in
     try
-        let _ = Parse.program Lexer.scanner lb in
+        let ast = Parse.program Lexer.scanner lb in
+        Weeder.wd_prog ast;
         print_endline "OK: parser completed successfully"
     with
     | Parse.Error -> Helpers.print_error lb "Parser"
