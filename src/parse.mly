@@ -6,7 +6,7 @@
     open Helpers
 
     let e_to_id = function
-        | IdentifierExpression (Ident str) -> Identifier str
+        | IdentifierExpression (Ident (str,pos)) -> Identifier (str,pos)
         | _ -> raise ExpressionIsNotIdentifier
 
     (* expression list to identifier list *)
@@ -25,9 +25,9 @@
   
     let is_simple_stmt stmt =
         match stmt with
-        | ExpressionStatement e ->
+        | ExpressionStatement (e,pos) ->
             (match e with
-            | FunctionCall (Identifier str, es) ->
+            | FunctionCall (Identifier (str,pos1), es, pos2) ->
                 (match str with
                 | "append" | "len" | "cap" -> false
                 | _ -> true)
@@ -42,96 +42,96 @@
 (* TOKENS *)
 
 (* Keywords *)
-%token BREAK
-%token CASE
-%token CHAN
-%token CONST
-%token CONTINUE
-%token DEFAULT
-%token DEFER
-%token ELSE
-%token FALLTHROUGH
-%token FOR
-%token FUNC
-%token GO
-%token GOTO
-%token IF
-%token IMPORT
-%token INTERFACE
-%token MAP
-%token PACKAGE
-%token RANGE
-%token RETURN
-%token SELECT
-%token STRUCT
-%token SWITCH
-%token TYPE
-%token VAR
+%token <int*int> BREAK
+%token <int*int> CASE
+%token <int*int> CHAN
+%token <int*int> CONST
+%token <int*int> CONTINUE
+%token <int*int> DEFAULT
+%token <int*int> DEFER
+%token <int*int> ELSE
+%token <int*int> FALLTHROUGH
+%token <int*int> FOR
+%token <int*int> FUNC
+%token <int*int> GO
+%token <int*int> GOTO
+%token <int*int> IF
+%token <int*int> IMPORT
+%token <int*int> INTERFACE
+%token <int*int> MAP
+%token <int*int> PACKAGE
+%token <int*int> RANGE
+%token <int*int> RETURN
+%token <int*int> SELECT
+%token <int*int> STRUCT
+%token <int*int> SWITCH
+%token <int*int> TYPE
+%token <int*int> VAR
 
 (* Keyword Functions *)
-%token PRINTLN
-%token PRINT
-%token APPEND
-%token LEN
-%token CAP
+%token <int*int> PRINTLN
+%token <int*int> PRINT
+%token <int*int> APPEND
+%token <int*int> LEN
+%token <int*int> CAP
 
 (* Punctuation *)
-%token LPAREN RPAREN (* (  ) *)
-%token LBRACK RBRACK (* [ ] *)
-%token LCURLY RCURLY (* { } *)
+%token <int*int> LPAREN RPAREN (* (  ) *)
+%token <int*int> LBRACK RBRACK (* [ ] *)
+%token <int*int> LCURLY RCURLY (* { } *)
 
-%token SEMICOLON (* ; *)
-%token COLON (* : *)
-%token COMMA (* , *)
-%token DOT (* . *)
-%token ELLIPSIS (* ... *)
+%token <int*int> SEMICOLON (* ; *)
+%token <int*int> COLON (* : *)
+%token <int*int> COMMA (* , *)
+%token <int*int> DOT (* . *)
+%token <int*int> ELLIPSIS (* ... *)
 
 (* Arithmetic operators *)
-%token PLUS MINUS (* '+' '-' *)
-%token MULT DIV (* '*' '/' *)
-%token MOD (* '%' *)
+%token <int*int> PLUS MINUS (* '+' '-' *)
+%token <int*int> MULT DIV (* '*' '/' *)
+%token <int*int> MOD (* '%' *)
 
 (* Bitwise Operators *)
-%token BAND BOR (* '&' '|' *)
-%token XOR (* '^' *)
-%token LSHFT RSHFT (* '<<' '>>' *)
-%token NAND (* '&^' *)
+%token <int*int> BAND BOR (* '&' '|' *)
+%token <int*int> XOR (* '^' *)
+%token <int*int> LSHFT RSHFT (* '<<' '>>' *)
+%token <int*int> NAND (* '&^' *)
 
 (* Arithmetic Assignment *)
-%token PLUSEQ MINUSEQ (* '+=' '-=' *)
-%token MULTEQ DIVEQ (* '*=' '/=' *)
-%token MODEQ (* '%=' *)
-%token INC DEC (* '++' '--' *)
+%token <int*int> PLUSEQ MINUSEQ (* '+=' '-=' *)
+%token <int*int> MULTEQ DIVEQ (* '*=' '/=' *)
+%token <int*int> MODEQ (* '%=' *)
+%token <int*int> INC DEC (* '++' '--' *)
 
 (* Bitwise Assignment (Shorthand version) *)
-%token BANDEQ BOREQ (* '&=' '|=' *)
-%token XOREQ (* '^=' *)
-%token LSHFTEQ RSHFTEQ (* '<<=' '>>=' *)
-%token NANDEQ (* '&^=' *)
+%token <int*int> BANDEQ BOREQ (* '&=' '|=' *)
+%token <int*int> XOREQ (* '^=' *)
+%token <int*int> LSHFTEQ RSHFTEQ (* '<<=' '>>=' *)
+%token <int*int> NANDEQ (* '&^=' *)
 
 (* Comparison Operators *)
-%token EQ NEQ (* '==' '!=' *)
-%token LT LTEQ (* '<' '<=' *)
-%token GT GTEQ (* '>' '>=' *)
-%token AND OR (* '&&' '||' *)
-%token NOT (* '!' *)
+%token <int*int> EQ NEQ (* '==' '!=' *)
+%token <int*int> LT LTEQ (* '<' '<=' *)
+%token <int*int> GT GTEQ (* '>' '>=' *)
+%token <int*int> AND OR (* '&&' '||' *)
+%token <int*int> NOT (* '!' *)
 
 (* Assignment Operators *)
-%token CHASG (* '<-' *)
-%token ASG (* assign '=' *)
-%token IASG (* assign with inference ':=' *)
+%token <int*int> CHASG (* '<-' *)
+%token <int*int> ASG (* assign '=' *)
+%token <int*int> IASG (* assign with inference ':=' *)
 
-%token BLANKID (* blank identifier '_' *)
+%token <int*int> BLANKID (* blank identifier '_' *)
 
 (* Parametrized Tokens *)
-%token <string> COMMENT
-%token <string> IDENT
-%token <int> LIT_INT
-%token <float> LIT_FLOAT
-%token <bool> LIT_BOOL
-%token <string> LIT_RUNE
-%token <string> LIT_STRING
-%token <string> LIT_RAW_STRING
+%token <string*(int*int)> COMMENT
+%token <string*(int*int)> IDENT
+%token <int*(int*int)> LIT_INT
+%token <float*(int*int)> LIT_FLOAT
+%token <bool*(int*int)> LIT_BOOL
+%token <string*(int*int)> LIT_RUNE
+%token <string*(int*int)> LIT_STRING
+%token <string*(int*int)> LIT_RAW_STRING
 
 (* end-of-file, required *)
 %token EOF
@@ -157,7 +157,7 @@ program :
     ;
 
 package :
-    | PACKAGE s=IDENT SEMICOLON { Package s }
+    | PACKAGE s_pos=IDENT SEMICOLON { let s,pos=s_pos in Package (s, pos) }
     ;
 
 declarations :
@@ -176,11 +176,11 @@ block_declaration :
     ;
 
 variable_declaration :
-    | VAR vd=variable_declaration_ { vd }
+    | pos=VAR vd=variable_declaration_ { VariableDeclaration (vd, pos) }
     ;
 variable_declaration_ :
-    | vd=var_spec { VariableDeclaration [vd] }
-    | LPAREN vds=var_specs RPAREN { VariableDeclaration vds }
+    | vd=var_spec { [vd] }
+    | LPAREN vds=var_specs RPAREN { vds }
     ;
 var_specs :
     | { [] }
@@ -201,18 +201,18 @@ var_spec_rhs :
     ;
 
 type_declaration :
-    | TYPE td=type_declaration_ { td }
+    | pos=TYPE td=type_declaration_ { TypeDeclaration (td,pos) }
     ;
 type_declaration_ :
-    | s=IDENT ts=type_spec { TypeDeclaration [(Identifier s, ts)] }
-    | LPAREN s_tds=s_type_specs RPAREN { TypeDeclaration s_tds }
+    | s_pos=IDENT ts=type_spec { let s,pos=s_pos in [(Identifier (s,pos), ts)] }
+    | LPAREN s_tds=s_type_specs RPAREN { s_tds }
     ;
 s_type_specs :
     | { [] }
-    | s=IDENT td=type_spec SEMICOLON s_tds=s_type_specs { (Identifier s, td)::s_tds }
+    | s_pos=IDENT ts=type_spec SEMICOLON s_tds=s_type_specs { let s,pos=s_pos in (Identifier (s,pos), ts)::s_tds }
     ;
 type_spec :
-    | s=IDENT { IdentifierType (Identifier s) }
+    | s_pos=IDENT { let s,pos=s_pos in IdentifierType (Identifier (s, pos)) }
     | tl=type_literal { tl }
     | LPAREN ts=type_spec RPAREN { ts }
     ;
@@ -222,10 +222,10 @@ type_literal :
     | sltl=slice_type_lit { sltl }
     ;
 array_type_lit :
-    | LBRACK i=LIT_INT RBRACK ts=type_spec { ArrayTypeLiteral (LitInt i, ts) }
+    | pos=LBRACK i_pos=LIT_INT RBRACK ts=type_spec { let i,ipos=i_pos in ArrayTypeLiteral (LitInt (i,ipos), ts, pos) }
     ;
 struct_type_lit :
-    | STRUCT LCURLY x=struct_field_decls  RCURLY { StructTypeLiteral x }
+    | pos=STRUCT LCURLY x=struct_field_decls  RCURLY { StructTypeLiteral (x, pos) }
     ;
 struct_field_decls :
     | { [] }
@@ -239,12 +239,12 @@ struct_field_decl :
       }
     ;
 slice_type_lit :
-    | LBRACK RBRACK ts=type_spec { SliceTypeLiteral ts }
+    | pos=LBRACK RBRACK ts=type_spec { SliceTypeLiteral (ts, pos) }
     ;
 
 function_declaration :
-    | FUNC s=IDENT LPAREN p=params RPAREN ts=option(type_spec) LCURLY ss=statements RCURLY
-      { FunctionDeclaration (Identifier s, p, ts, ss) }
+    | pos1=FUNC s_pos=IDENT LPAREN p=params RPAREN ts=option(type_spec) LCURLY ss=statements RCURLY
+      { let s,pos2=s_pos in FunctionDeclaration (Identifier (s, pos2), p, ts, ss, pos1) }
     ;
 
 params :
@@ -257,15 +257,15 @@ ids_w_type :
 
 (*Print and print_ln staterments *)
 print_statement :
-    | PRINT LPAREN es=expression_list RPAREN   { PrintStatement (Some es) }
-    | PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement (Some es) }
-    | PRINT LPAREN RPAREN {PrintStatement None}
-    | PRINTLN LPAREN RPAREN {PrintlnStatement None}
+    | pos=PRINT LPAREN es=expression_list RPAREN   { PrintStatement (Some es, pos) }
+    | pos=PRINTLN LPAREN es=expression_list RPAREN { PrintlnStatement (Some es, pos) }
+    | pos=PRINT LPAREN RPAREN {PrintStatement (None, pos)}
+    | pos=PRINTLN LPAREN RPAREN {PrintlnStatement (None, pos)}
     ;
 
 (*For statements *)
 for_loop :
-    | FOR fl=loop_type { fl }
+    | pos=FOR fl=loop_type { let s1,eo,s2,ss=fl in ForStatement (s1, eo, s2, ss, pos) }
     ;
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
@@ -273,15 +273,15 @@ loop_type :
     | s1=statement_ SEMICOLON eo=option(exp) SEMICOLON s2=statement_ LCURLY ss=statements RCURLY
       {
           err_if ((not (is_simple_stmt s1)) || (not (is_simple_stmt s2))) NotSimpleStatement;
-          ForStatement (s1, eo, s2, ss)
+          (s1, eo, s2, ss)
       }
     | LCURLY ss=statements RCURLY
       {
-          ForStatement (EmptyStatement, None, EmptyStatement, ss)
+          (EmptyStatement, None, EmptyStatement, ss)
       }
     | e=exp LCURLY ss=statements RCURLY
       {
-          ForStatement (EmptyStatement, Some e, EmptyStatement, ss)
+          (EmptyStatement, Some e, EmptyStatement, ss)
       }
     ;
 
@@ -293,13 +293,13 @@ statements :
 
 
 ident_type :
-    | s=IDENT                          { Ident s } (* Normal as is *)
-    | LPAREN exp=exp RPAREN  LBRACK e=exp RBRACK   { Indexed (exp, e) } (* array and slice element access *)
-    | exp=funccall  LBRACK e=exp RBRACK   { Indexed (exp, e) }
-    | exp=ident_type  LBRACK e=exp RBRACK   { Indexed (IdentifierExpression exp, e) }
-    | LPAREN exp=exp RPAREN DOT id=IDENT        { StructAccess (exp, id) } (* Struct element access *)
-    | e=funccall DOT id=IDENT               {StructAccess (e, id)}
-    | e=ident_type DOT id=IDENT             {StructAccess (IdentifierExpression e, id)}
+    | s_pos=IDENT                                   { let s,pos=s_pos in Ident (s,pos) } (* Normal as is *)
+    | LPAREN exp=exp RPAREN pos=LBRACK e=exp RBRACK { Indexed (exp, e, pos) } (* array and slice element access *)
+    | exp_pos=funccall pos=LBRACK e=exp RBRACK      { let exp,_=exp_pos in Indexed (exp, e, pos) }
+    | exp=ident_type pos=LBRACK e=exp RBRACK        { Indexed (IdentifierExpression exp, e, pos) }
+    | LPAREN exp=exp RPAREN pos=DOT id_pos=IDENT    { let id,_=id_pos in StructAccess (exp, id, pos) } (* Struct element access *)
+    | e_pos=funccall pos=DOT id_pos=IDENT           { let (e,_),(id,_)=e_pos,id_pos in StructAccess (e, id, pos) }
+    | e=ident_type pos=DOT id_pos=IDENT             { let id,_=id_pos in StructAccess (IdentifierExpression e, id, pos) }
     ;
 
 asg_tok :
@@ -323,21 +323,21 @@ statement :
     ;
 
 block_statement :
-    | LCURLY ss=statements RCURLY { BlockStatements ss }
+    | pos=LCURLY ss=statements RCURLY { BlockStatements (ss,pos) }
 
 statement_ :
-    | e=funccall              { ExpressionStatement e }
+    | e_pos=funccall          { let e,pos=e_pos in ExpressionStatement (e, pos) }
     | s=assignment_statement  { s }
     | d=block_declaration     { DeclarationStatement d }
     | s=short_val_declaration { s }
     | s=inc_dec_statement     { s }
     | s=print_statement       { s }
-    | RETURN eo=option(exp)   { ReturnStatement eo }
+    | pos=RETURN eo=option(exp)   { ReturnStatement (eo, pos) }
     | ifs=if_statement        { IfStatement ifs }
     | s=switch_statement      { s }
     | s=for_loop              { s }
-    | BREAK                   { Break }
-    | CONTINUE                { Continue }
+    | pos=BREAK               { Break pos }
+    | pos=CONTINUE            { Continue pos }
     |                         { EmptyStatement }
     ;
 
@@ -364,56 +364,56 @@ inc_dec_statement :
     ;
 
 if_statement :
-    | IF e=exp LCURLY ss=statements RCURLY en=endif
+    | pos=IF e=exp LCURLY ss=statements RCURLY en=endif
       {
-          If (EmptyStatement, e, ss, en)
+          If (EmptyStatement, e, ss, en, pos)
       }
-    | IF s=statement_ SEMICOLON e=exp LCURLY ss=statements RCURLY en=endif
+    | pos=IF s=statement_ SEMICOLON e=exp LCURLY ss=statements RCURLY en=endif
       {
           err_if (not (is_simple_stmt s)) NotSimpleStatement;
-          If (s, e, ss, en)
+          If (s, e, ss, en, pos)
       }
     ;
 endif :
-    | ELSE ifs=if_statement                 { Some (Elseif ifs) }
-    | ELSE LCURLY ss=statements RCURLY { Some (Else ss) }
-    |                                       { None }
+    | pos=ELSE ifs=if_statement            { Some (Elseif (ifs, pos)) }
+    | pos=ELSE LCURLY ss=statements RCURLY { Some (Else (ss, pos)) }
+    |                                      { None }
     ;
 
 switch_statement :
-    | SWITCH eo=option(exp) LCURLY
+    | pos=SWITCH eo=option(exp) LCURLY
           scl=list(expr_case_clause)
       RCURLY
       {
-          let f acc sc = match sc with | Default ss -> acc+1 | _ -> acc in
+          let f acc sc = match sc with | Default (ss,_) -> acc+1 | _ -> acc in
           err_if (1 < List.fold_left f 0 scl) SwitchMultipleDefaults;
-          SwitchStatement (EmptyStatement, eo, scl)
+          SwitchStatement (EmptyStatement, eo, scl, pos)
       }
-    | SWITCH s=statement_ SEMICOLON eo=option(exp) LCURLY
+    | pos=SWITCH s=statement_ SEMICOLON eo=option(exp) LCURLY
           scl=list(expr_case_clause)
       RCURLY
       {
-          let f acc sc = match sc with | Default ss -> acc+1 | _ -> acc in
+          let f acc sc = match sc with | Default (ss,_) -> acc+1 | _ -> acc in
           err_if (1 < List.fold_left f 0 scl) SwitchMultipleDefaults;
           err_if (not (is_simple_stmt s)) NotSimpleStatement;
-          SwitchStatement (s, eo, scl)
+          SwitchStatement (s, eo, scl, pos)
       }
 
 expr_case_clause :
     | esc=expr_switch_case COLON ss=statements
       {
           match esc with
-          | None    -> Default ss
-          | Some es -> Case (es, ss)
+          | None,    pos -> Default (ss, pos)
+          | Some es, pos -> Case (es, ss, pos)
       }
     ;
 expr_switch_case :
-    | DEFAULT                 { None }
-    | CASE es=expression_list { Some es }
+    | pos=DEFAULT                 { None, pos }
+    | pos=CASE es=expression_list { Some es, pos }
     ;
 
 identifier_list :
-    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun str -> Identifier str) (List.rev ids) }
+    | ids=separated_nonempty_list(COMMA, IDENT) { List.map (fun (s,pos) -> Identifier (s,pos)) (List.rev ids) }
     ;
 
 
@@ -423,53 +423,53 @@ expression_list :
 
 exp :
 (* binary operator expressions *)
-    | e1=exp OR e2=exp         { Or (e1, e2) }
-    | e1=exp AND e2=exp        { And (e1, e2) }
-    | e1=exp EQ e2=exp         { Eq (e1, e2) }
-    | e1=exp NEQ e2=exp        { Neq (e1, e2) }
-    | e1=exp GT e2=exp         { Gt (e1, e2) }
-    | e1=exp GTEQ e2=exp       { Gteq (e1, e2) }
-    | e1=exp LT e2=exp         { Lt (e1, e2) }
-    | e1=exp LTEQ e2=exp       { Lteq (e1, e2) }
-    | e1=exp PLUS e2=exp       { Plus (e1, e2) }
-    | e1=exp MINUS e2=exp      { Minus (e1, e2) }
-    | e1=exp BOR e2=exp        { Bor (e1, e2) }
-    | e1=exp XOR e2=exp        { Xor (e1, e2) }
-    | e1=exp MULT e2=exp       { Mult (e1, e2) }
-    | e1=exp DIV e2=exp        { Div (e1, e2) }
-    | e1=exp MOD e2=exp        { Mod (e1, e2) }
-    | e1=exp LSHFT e2=exp      { Lshft (e1, e2) }
-    | e1=exp RSHFT e2=exp      { Rshft (e1, e2) }
-    | e1=exp BAND e2=exp       { Band (e1, e2) }
-    | e1=exp NAND e2=exp       { Nand (e1, e2) }
-    | PLUS e1=exp %prec UNARY  { Uplus e1}
-    | MINUS e1=exp %prec UNARY { Uminus e1}
-    | NOT e1=exp %prec UNARY   { Not e1}
-    | XOR e1=exp %prec UNARY   { Uxor e1 }
+    | e1=exp pos=OR e2=exp         { Or (e1, e2, pos) }
+    | e1=exp pos=AND e2=exp        { And (e1, e2, pos) }
+    | e1=exp pos=EQ e2=exp         { Eq (e1, e2, pos) }
+    | e1=exp pos=NEQ e2=exp        { Neq (e1, e2, pos) }
+    | e1=exp pos=GT e2=exp         { Gt (e1, e2, pos) }
+    | e1=exp pos=GTEQ e2=exp       { Gteq (e1, e2, pos) }
+    | e1=exp pos=LT e2=exp         { Lt (e1, e2, pos) }
+    | e1=exp pos=LTEQ e2=exp       { Lteq (e1, e2, pos) }
+    | e1=exp pos=PLUS e2=exp       { Plus (e1, e2, pos) }
+    | e1=exp pos=MINUS e2=exp      { Minus (e1, e2, pos) }
+    | e1=exp pos=BOR e2=exp        { Bor (e1, e2, pos) }
+    | e1=exp pos=XOR e2=exp        { Xor (e1, e2, pos) }
+    | e1=exp pos=MULT e2=exp       { Mult (e1, e2, pos) }
+    | e1=exp pos=DIV e2=exp        { Div (e1, e2, pos) }
+    | e1=exp pos=MOD e2=exp        { Mod (e1, e2, pos) }
+    | e1=exp pos=LSHFT e2=exp      { Lshft (e1, e2, pos) }
+    | e1=exp pos=RSHFT e2=exp      { Rshft (e1, e2, pos) }
+    | e1=exp pos=BAND e2=exp       { Band (e1, e2, pos) }
+    | e1=exp pos=NAND e2=exp       { Nand (e1, e2, pos) }
+    | pos=PLUS e1=exp %prec UNARY  { Uplus (e1, pos) }
+    | pos=MINUS e1=exp %prec UNARY { Uminus (e1, pos) }
+    | pos=NOT e1=exp %prec UNARY   { Not (e1, pos) }
+    | pos=XOR e1=exp %prec UNARY   { Uxor (e1, pos) }
     | e=exp_other              { e }
     ;
 (* 'keyword functions' *)
 exp_other :
-    | e=funccall                                   { e } 
-    | APPEND LPAREN e1=exp COMMA e2=exp RPAREN { Append (e1, e2) } (* Append *)
-    | LEN LPAREN e=exp RPAREN                  { Len e } (* array/slice length *)
-    | CAP LPAREN e=exp RPAREN                  { Cap e } (* array/slice capacity *)
-    | LPAREN e=exp RPAREN                      { ParenExpression e } (* '(' exp ')' *)
-    | e=operand                                { e }
+    | e_pos=funccall                               { let e,pos=e_pos in e } 
+    | pos=APPEND LPAREN e1=exp COMMA e2=exp RPAREN { Append (e1, e2, pos) } (* Append *)
+    | pos=LEN LPAREN e=exp RPAREN                  { Len (e, pos) } (* array/slice length *)
+    | pos=CAP LPAREN e=exp RPAREN                  { Cap (e, pos) } (* array/slice capacity *)
+    | pos=LPAREN e=exp RPAREN                      { ParenExpression (e, pos) } (* '(' exp ')' *)
+    | e=operand                                    { e }
     ;
 
 funccall :
-    | str=IDENT LPAREN es=separated_list(COMMA, exp) RPAREN           { FunctionCall (Identifier str, es) }
-    | LPAREN e=exp RPAREN LPAREN es=separated_list(COMMA, exp) RPAREN { FunctionCall ((e_to_id e), es) } 
+    | s_pos=IDENT LPAREN es=separated_list(COMMA, exp) RPAREN             { let s,pos=s_pos in (FunctionCall (Identifier (s,pos), es, pos)), pos }
+    | pos=LPAREN e=exp RPAREN LPAREN es=separated_list(COMMA, exp) RPAREN { (FunctionCall ((e_to_id e), es, pos)), pos } 
     ;
 
 (* identifiers and rvalues *)
 operand :
     | idexp=ident_type   { IdentifierExpression idexp }
-    | i=LIT_INT          { LitInt i }
-    | b=LIT_BOOL         { LitBool b }
-    | f=LIT_FLOAT        { LitFloat f }
-    | str=LIT_RUNE       { LitRune str }
-    | str=LIT_STRING     { LitString str }
-    | str=LIT_RAW_STRING { LitRawString str}
+    | i_pos=LIT_INT          { let i,pos=i_pos in LitInt (i, pos) }
+    | b_pos=LIT_BOOL         { let b,pos=b_pos in LitBool (b, pos) }
+    | f_pos=LIT_FLOAT        { let f,pos=f_pos in LitFloat (f, pos) }
+    | str_pos=LIT_RUNE       { let str,pos=str_pos in LitRune (str, pos) }
+    | str_pos=LIT_STRING     { let str,pos=str_pos in LitString (str, pos) }
+    | str_pos=LIT_RAW_STRING { let str,pos=str_pos in LitRawString (str, pos) }
     ;
