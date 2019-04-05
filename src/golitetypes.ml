@@ -41,7 +41,7 @@ let rec string_of_glt gt =
     | BoolT -> "BoolT"
     | RuneT -> "RuneT"
     | StringT -> "StringT"
-    | NamedT str -> "NamedT( " ^ str ^ " )"
+    | NamedT (str, lineno) -> "NamedT( " ^ str ^ ", " ^ (string_of_int lineno) ^ " )"
     | StructT stds ->
         "struct{ " ^ (string_of_strs (List.map string_of_std stds)) ^"}"
     | ArrayT (i, gt) ->
