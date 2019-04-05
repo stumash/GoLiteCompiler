@@ -1,7 +1,7 @@
 (* Abstract Syntax Tree definition *)
 
 type prog =
-  | Program of package * (declaration list) 
+  | Program of package * (declaration list)
   | EmptyProgram
 
 and package =
@@ -16,7 +16,7 @@ and identifier =
   | Identifier of string * (int * int)
 
 and type_spec =
-  | IdentifierType of identifier 
+  | IdentifierType of identifier
   | ArrayTypeLiteral of expression * type_spec * (int * int)
   | StructTypeLiteral of (identifier * type_spec) list * (int * int)
   | SliceTypeLiteral of type_spec * (int * int)
@@ -29,8 +29,8 @@ and statement =
   | AssignmentStatement of (expression list) * assignment_operator * (expression list)
   | DeclarationStatement of declaration
   | ShortValDeclaration of (identifier list) * (expression list)
-  | Inc of expression 
-  | Dec of expression 
+  | Inc of expression
+  | Dec of expression
   | PrintStatement of (expression list option) * (int * int)
   | PrintlnStatement of (expression list option) * (int * int)
   | ReturnStatement of expression option * (int * int)
