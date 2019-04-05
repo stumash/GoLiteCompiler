@@ -18,24 +18,24 @@ exception VarDecIdsLenNeqExpsLen
 exception NotSimpleStatement
 exception MultAsgCannotShorthand
 exception SwitchMultipleDefaults
-exception TypeCheckError of string
-exception TypeCheckParserError of string
+exception TypeCheckError of string * (int * int)
+exception TypeCheckParserError of string * (int * int)
 exception BreakContinueError of string * (int * int) 
 
 let z (lineno,colno) = " at L" ^ (string_of_int lineno) ^ ",C" ^ (string_of_int colno)
 
 let handle_error ?(default="Default") lb = function
-    | TypeCheckError str           -> print_error lb @@ "TypeChecker: " ^ str
-    | TypeCheckParserError str     -> print_error lb @@ "TypeChecker: ParserError: " ^ str
-    | ExpressionIsNotIdentifier    -> print_error lb "Parser: exp is not ident"
-    | VarDecIdsLenNeqExpsLen       -> print_error lb "Parser: var. decl. LHS size unequal RHS size"
-    | VarDecNeedsTypeOrInit        -> print_error lb "Parser: var. decl. needs type or initializer"
-    | NotSimpleStatement           -> print_error lb "Parser: statement is not a 'simple statement'"
-    | MultAsgCannotShorthand       -> print_error lb "Parser: multiple assignment must use '='"
-    | SwitchMultipleDefaults       -> print_error lb "Parser: switch has multiple default cases"
-    | BreakContinueError (str,pos) -> print_error lb @@ "Parser: " ^ str ^ (z pos)
-    | LexerError                   -> print_error lb "Scanner"
-    | _                            -> print_error lb default
+    | TypeCheckError (str, pos)       -> print_error lb @@ "TypeChecker: " ^ str ^ (z pos)
+    | TypeCheckParserError (str, pos) -> print_error lb @@ "TypeChecker: ParserError: " ^ str ^ (z pos)
+    | ExpressionIsNotIdentifier       -> print_error lb "Parser: exp is not ident"
+    | VarDecIdsLenNeqExpsLen          -> print_error lb "Parser: var. decl. LHS size unequal RHS size"
+    | VarDecNeedsTypeOrInit           -> print_error lb "Parser: var. decl. needs type or initializer"
+    | NotSimpleStatement              -> print_error lb "Parser: statement is not a 'simple statement'"
+    | MultAsgCannotShorthand          -> print_error lb "Parser: multiple assignment must use '='"
+    | SwitchMultipleDefaults          -> print_error lb "Parser: switch has multiple default cases"
+    | BreakContinueError (str,pos)    -> print_error lb @@ "Parser: " ^ str ^ (z pos)
+    | LexerError                      -> print_error lb "Scanner"
+    | _                               -> print_error lb default
 
 
 (* GENERAL HELPERS *)

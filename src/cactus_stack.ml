@@ -39,7 +39,6 @@ let print_cs_node csn =
         Hashtbl.iter p_kv tbl
     in
     let rec print_cs_node' indent csn =
-        let s_indent = String.make (indent * 4) ' ' in
         let cxt = context csn in
         let kids = !(children csn) in
         p_tbl cxt indent;

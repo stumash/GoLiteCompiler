@@ -11,7 +11,7 @@ type gltype =
     | BoolT
     | RuneT
     | StringT
-    | NamedT of string * int
+    | NamedT of string * (int * int)
     | StructT of (string * gltype) list
     | ArrayT of int * gltype
     | SliceT of gltype
@@ -41,7 +41,7 @@ let rec string_of_glt gt =
     | BoolT -> "BoolT"
     | RuneT -> "RuneT"
     | StringT -> "StringT"
-    | NamedT (str, lineno) -> "NamedT( " ^ str ^ ", " ^ (string_of_int lineno) ^ " )"
+    | NamedT (str, (lineno, colno)) -> "NamedT( " ^ str ^ ", " ^ (string_of_int lineno) ^ ":" ^ (string_of_int colno) ^ " )"
     | StructT stds ->
         "struct{ " ^ (string_of_strs (List.map string_of_std stds)) ^"}"
     | ArrayT (i, gt) ->

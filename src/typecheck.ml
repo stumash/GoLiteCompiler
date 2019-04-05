@@ -14,8 +14,8 @@ let root_context =
     Hashtbl.add ht "rune"    (T.Type,     T.RuneT);
     Hashtbl.add ht "string"  (T.Type,     T.StringT);
     (* literals *)
-    Hashtbl.add ht "true"    (T.Constant, T.NamedT "bool");
-    Hashtbl.add ht "false"   (T.Constant, T.NamedT "bool");
+    Hashtbl.add ht "true"    (T.Constant, T.NamedT ("bool", (-1,-1)));
+    Hashtbl.add ht "false"   (T.Constant, T.NamedT ("bool", (-1,-1)));
     ht
 
 let root_scope = CsNode {
@@ -32,7 +32,7 @@ let global_scope = CsNode {
 
 let () =
     match root_scope with
-    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsRoot -> raise (TypeCheckError ("IMPOSSIBLE", (-1,-1)))
     | CsNode { parent; children; context } ->
         children := global_scope :: !children
 
@@ -69,47 +69,47 @@ let basmsg  = "IntT, RuneT, FloatT, StringT, BoolT"
 let cmpmsg  = "IntT, RuneT, FloatT, StringT, BoolT, StructT, ArrayT"
 let sctmsg  = "StructT"
 
-let get_vcat_gltype_from_str str =
-    let rec get_vcat_gltype_from_str' str scope =
+let get_vcat_gltype_from_str str pos =
+    let rec get_vcat_gltype_from_str' str pos scope =
         try Hashtbl.find (context scope) str with
         | Not_found ->
             (match parent scope with
-            | CsRoot -> raise (TypeCheckError (str ^ " not declared"))
-            | csn    -> get_vcat_gltype_from_str' str csn) in
-    get_vcat_gltype_from_str' str !current_scope
+            | CsRoot -> raise (TypeCheckError (str ^ " not declared", pos))
+            | csn    -> get_vcat_gltype_from_str' str pos csn) in
+    get_vcat_gltype_from_str' str pos !current_scope
 
 let rt glt =
     let rec rt' glt scope =
         match glt with
-        | T.NamedT str ->
+        | T.NamedT (str, pos) ->
             (try rt' (snd (Hashtbl.find (context scope) str)) scope with
             | Not_found ->
                 (match parent scope with
-                | CsRoot -> raise (TypeCheckError (str^" not declared"))
+                | CsRoot -> raise (TypeCheckError (str^" not declared", pos))
                 | csn    -> rt' glt csn))
         | _ -> glt in
     rt' glt !current_scope
 
-(* Pass-Through [y] If Resolved Type [of y is] In [list xs] *)
-let pt_if_rt f msg y =
-    if f (rt y) then y
-    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg))
+(* Pass-Through [y] If Resolved Type [of y is] In [list of types of f] *)
+let pt_if_rt f msg (y, pos) =
+    if f (rt y) then (y, pos)
+    else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg, pos))
 
 (* Pass-Through [y] If Resolved Type [of y is] is RECURSIVELY never T.SliceT *)
-let pt_if_never_slice y =
+let pt_if_never_slice (y, pos) =
     let rec pt_if_never_slice' y' =
         match y' with
-        | T.SliceT _        -> raise (TypeCheckError "slice is not comparable")
+        | T.SliceT _        -> raise (TypeCheckError ("slice is not comparable", pos))
         | T.ArrayT (i, glt) -> pt_if_never_slice' glt
         | T.StructT stds    -> let _,glts = List.split stds in List.hd @@ List.map pt_if_never_slice' glts
         | T.NamedT _        -> pt_if_never_slice' (rt y')
-        | _ -> y in
+        | _                 -> (y, pos) in
     pt_if_never_slice' y
 
-let err_if_id_in_current_scope (Identifier str) =
+let err_if_id_in_current_scope (Identifier (str, pos)) =
     try
         let _ = Hashtbl.find (context !current_scope) str in
-        raise (TypeCheckError (str ^ " is already in current scope"))
+        raise (TypeCheckError (str ^ " is already in current scope", pos))
     with
     | Not_found -> ()
 
