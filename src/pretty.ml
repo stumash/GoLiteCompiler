@@ -9,6 +9,10 @@ let pp_comma_separated_xs xs pp_x =
     let f i x = pp_x x; if i != (List.length xs)-1 then print_string ", " else () in
     List.iteri f xs
 
+(* print an indentation given an indent level *)
+let p_ind il =
+    print_string @@ String.make (il * 2) ' '
+
 (*-----------------------------------*
  * pp - Pretty Print
  *-----------------------------------*)
@@ -24,10 +28,10 @@ and pp_pkg (Package (str,_)) =
     printf "package %s\n" str
 
 (* declaration *)
-and pp_decl decl =
+and pp_decl ?(il=0) decl =
     match decl with
     | FunctionDeclaration (id, prms, tpo, ss, _) ->
-        pp_id id; p "("; pp_prms prms; p ") "; ifsome tpo pp_tp; p " {\n";
+        p_ind il; pp_id id; p "("; pp_prms prms; p ") "; ifsome tpo pp_tp; p " {\n";
         List.iter pp_stmt ss;
         p "}\n"
     | VariableDeclaration (vds,_) ->
@@ -36,14 +40,14 @@ and pp_decl decl =
             ifsome eso (fun es -> p " = "; pp_exps es); p "\n" in
         (match vds with
         | []   -> () (* remove empty variable declarations *)
-        | [vd] -> p "var "; pp_vd vd
-        | vds  -> p "var (\n"; List.iter pp_vd vds; p ")\n")
+        | [vd] -> p_ind il; p "var "; pp_vd vd
+        | vds  -> p_ind il; p "var (\n"; List.iter pp_vd vds; p ")\n")
     | TypeDeclaration (tds,_) ->
         let pp_td (id, tp) = pp_id id; p " "; pp_tp tp; p "\n" in
         (match tds with
         | []   -> () (* remove empty type declarations *)
-        | [td] -> p "type "; pp_td td
-        | tds  -> p "type (\n"; List.iter pp_td tds; p ")\n")
+        | [td] -> p_ind il; p "type "; pp_td td
+        | tds  -> p_ind il; p "type (\n"; List.iter pp_td tds; p ")\n")
 
 (* identifier *)
 and pp_id (Identifier (str,_)) =
@@ -69,28 +73,29 @@ and pp_prm (ids, tp) =
 
 (* statement *)
 (* bool nl: if true print trailing newline in 'simple statementp' *)
-and pp_stmt ?(nl=true) stmt =
+(* int il: indent level *)
+and pp_stmt ?(il=0) ?(nl=true) stmt =
     match stmt with
     (* simple statements *)
-    | ExpressionStatement (e,_)           -> pp_exp e; ifp nl "\n"
-    | AssignmentStatement (es1, aop, es2) -> pp_exps es1; pp_aop aop; pp_exps es2; ifp nl "\n"
-    | ShortValDeclaration (ids, es)       -> pp_ids ids; p " := "; pp_exps es; ifp nl "\n"
-    | Inc e                               -> pp_exp e; p "++"; ifp nl "\n"
-    | Dec e                               -> pp_exp e; p "--"; ifp nl "\n"
+    | ExpressionStatement (e,_)           -> p_ind il; pp_exp e; ifp nl "\n"
+    | AssignmentStatement (es1, aop, es2) -> p_ind il; pp_exps es1; pp_aop aop; pp_exps es2; ifp nl "\n"
+    | ShortValDeclaration (ids, es)       -> p_ind il; pp_ids ids; p " := "; pp_exps es; ifp nl "\n"
+    | Inc e                               -> p_ind il; pp_exp e; p "++"; ifp nl "\n"
+    | Dec e                               -> p_ind il; pp_exp e; p "--"; ifp nl "\n"
     | EmptyStatement                      -> ifp nl "\n"
     (* all other statements *)
-    | DeclarationStatement decl           -> pp_decl decl
-    | PrintStatement (Some es,_)          -> p "print("; pp_exps es; p ")\n"
-    | PrintlnStatement (Some es,_)        -> p "println("; pp_exps es; p ")\n"
-    | PrintStatement (None,_)             -> p "print ()\n"
-    | PrintlnStatement (None,_)           -> p "println ()\n"
-    | ReturnStatement (eo,_)              -> p "return "; ifsome eo pp_exp; p "\n"
+    | DeclarationStatement decl           -> pp_decl ~il decl
+    | PrintStatement (Some es,_)          -> p_ind il; p "print("; pp_exps es; p ")\n"
+    | PrintlnStatement (Some es,_)        -> p_ind il; p "println("; pp_exps es; p ")\n"
+    | PrintStatement (None,_)             -> p_ind il; p "print ()\n"
+    | PrintlnStatement (None,_)           -> p_ind il; p "println ()\n"
+    | ReturnStatement (eo,_)              -> p_ind il; p "return "; ifsome eo pp_exp; p "\n"
     | IfStatement ifs                     -> pp_ifs ifs
     | SwitchStatement (so, eo, scl, _)    -> pp_sw (so, eo, scl)
     | ForStatement (so1, eo, so2, ss, _)  -> pp_for (so1, eo, so2, ss)
-    | Break _                             -> p "break\n"
-    | Continue _                          -> p "continue\n"
-    | BlockStatements (ss,_)              -> p "{\n"; List.iter pp_stmt ss; p "}\n"
+    | Break _                             -> p_ind il; p "break\n"
+    | Continue _                          -> p_ind il; p "continue\n"
+    | BlockStatements (ss,_)              -> p_ind il; p "{\n"; List.iter (pp_stmt ~il:(il+1)) ss; p_ind il; p "}\n"
 
 (* assignment operator *)
 and pp_aop aop =
