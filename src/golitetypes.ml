@@ -11,7 +11,7 @@ type gltype =
     | BoolT
     | RuneT
     | StringT
-    | NamedT of string
+    | NamedT of string * int
     | StructT of (string * gltype) list
     | ArrayT of int * gltype
     | SliceT of gltype
