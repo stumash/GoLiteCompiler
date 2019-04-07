@@ -513,25 +513,27 @@ and type_check_ifst ic outer_ret_glt =
 and type_check_switch sw outer_ret_glt =
     match sw with
     | (s, None , swcs) ->
-        create_and_enter_child_scope();
+        create_and_enter_child_scope ();
         type_check_stmt s outer_ret_glt;
         let f swc =
             (match swc with
             | Default (ss, pos) ->
-                create_and_enter_child_scope();
+                create_and_enter_child_scope ();
                 let glto = type_check_stmts ss outer_ret_glt in 
-                enter_parent_scope();
-                glto
+                enter_parent_scope ();
+                glto,true
             | Case (es, ss, pos) ->
                 List.iter (fun e -> (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT"; ()) es;
-                create_and_enter_child_scope();
+                create_and_enter_child_scope ();
                 let glto = type_check_stmts ss outer_ret_glt in 
-                enter_parent_scope();
-                glto) in
-        let gltos = List.map f swcs in
-        enter_parent_scope();
-        (); (* TODO: is any None, then None, or something *)
-        Some T.Void (* TODO *)
+                enter_parent_scope ();
+                glto,false) in
+        let gltos_isdefs = List.map f swcs in
+        enter_parent_scope ();
+        let f (last_glt,hasdef) (glto,isdef) =
+            (* TODO, doesn't compile *)
+            in
+        fst (List.fold_left f (None,false) gltos_isdefs)
     | (s, Some e, swcs) ->
         create_and_enter_child_scope();
         type_check_stmt s outer_ret_glt;
