@@ -112,3 +112,49 @@ and identifier_expression =
   | Ident of string * (int * int)
   | Indexed of expression * expression * (int * int)
   | StructAccess of expression * string * (int * int)
+
+let rec get_pos_e = function
+(* binary expression *)
+  | Or ( _ , _ , pos) -> pos
+  | And ( _ , _ , pos) -> pos
+  | Eq ( _ , _ , pos) -> pos
+  | Neq ( _ , _ , pos) -> pos
+  | Gt ( _ , _ , pos) -> pos
+  | Gteq ( _ , _ , pos) -> pos
+  | Lt ( _ , _ , pos) -> pos
+  | Lteq ( _ , _ , pos) -> pos
+  | Plus ( _ , _ , pos) -> pos
+  | Minus ( _ , _ , pos) -> pos
+  | Bor ( _ , _ , pos) -> pos
+  | Xor ( _ , _ , pos) -> pos
+  | Mult ( _ , _ , pos) -> pos
+  | Div ( _ , _ , pos) -> pos
+  | Mod ( _ , _ , pos) -> pos
+  | Lshft ( _ , _ , pos) -> pos
+  | Rshft ( _ , _ , pos) -> pos
+  | Band ( _ , _ , pos) -> pos
+  | Nand ( _ , _ , pos) -> pos
+(* unary expression *)
+  | Uplus ( _ , pos) -> pos
+  | Uminus ( _ , pos) -> pos
+  | Not ( _ , pos) -> pos
+  | Uxor ( _ , pos) -> pos
+(* function calls *)
+  | FunctionCall ( _  , _ , pos) -> pos
+  | Append ( _ , _ , pos) -> pos
+  | Len ( _ , pos) -> pos
+  | Cap ( _ , pos) -> pos
+(* misc *)
+  | ParenExpression ( _ , pos) -> pos
+  | LitInt ( _ , pos) -> pos
+  | LitBool ( _ , pos) -> pos
+  | LitFloat ( _ , pos) -> pos
+  | LitRune ( _ , pos) -> pos
+  | LitInt ( _ , pos) -> pos
+  | LitRawString ( _ , pos) -> pos
+  | IdentifierExpression idexp -> get_pos_idexp idexp
+
+and get_pos_idexp = function
+  | Ident ( _ , pos) -> pos
+  | Indexed ( _ , _ , pos) -> pos
+  | StructAccess ( _ , _ , pos) -> pos

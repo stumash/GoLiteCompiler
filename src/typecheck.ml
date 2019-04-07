@@ -92,7 +92,7 @@ let rt glt =
 
 (* Pass-Through [y] If Resolved Type [of y is] In [list of types of f] *)
 let pt_if_rt f msg (y, pos) =
-    if f (rt y) then (y, pos)
+    if f (rt y) then y
     else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg, pos))
 
 (* Pass-Through [y] If Resolved Type [of y is] is RECURSIVELY never T.SliceT *)
@@ -114,7 +114,7 @@ let err_if_id_in_current_scope (Identifier (str, pos)) =
     | Not_found -> ()
 
 (* recurse until entry found, then do check *)
-let err_if_id_not_declared ?f:(op=0) ?(check=(fun a b -> b)) (Identifier str) =
+let err_if_id_not_declared ?f:(op=0) ?(check=(fun a b -> b)) (Identifier (str, pos)) =
     let rec err_if_id_not_declared' str scope =
         try
             let (cat, glt) = Hashtbl.find (context scope) str in
@@ -123,26 +123,26 @@ let err_if_id_not_declared ?f:(op=0) ?(check=(fun a b -> b)) (Identifier str) =
         | Not_found ->
             (match op with 
             | 0 -> (match parent scope with
-                    | CsRoot -> raise (TypeCheckError (str ^ " not declared"))
+                    | CsRoot -> raise (TypeCheckError (str ^ " not declared", pos))
                     | csn    -> err_if_id_not_declared' str csn)
             | 1 -> T.Void )
    in
    err_if_id_not_declared' str !current_scope
 
-let err_if_type_not_declared (IdentifierType ((Identifier str) as id)) =
+let err_if_type_not_declared (IdentifierType ((Identifier (str, pos)) as id)) =
     let check cat glt =
         if cat = T.Type then glt
         else
             let scat = T.string_of_vcat cat in
             let s = (str ^ " is a " ^ scat ^ ", not a Type") in
-            raise (TypeCheckError s)
+            raise (TypeCheckError (s, pos))
     in
     err_if_id_not_declared ~check id
 
 let create_and_enter_child_scope () =
     let add new_scope =
         match !current_scope with
-        | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+        | CsRoot -> raise (TypeCheckError ("IMPOSSIBLE", (-1, -1)))
         | CsNode {parent; children; context} ->
             children := new_scope :: !children in
     let new_scope = CsNode { parent=(!current_scope); children=ref []; context=(Hashtbl.create 8)} in
@@ -150,7 +150,7 @@ let create_and_enter_child_scope () =
 
 let enter_parent_scope () =
     match !current_scope with
-    | CsRoot -> raise (TypeCheckError "IMPOSSIBLE")
+    | CsRoot -> raise (TypeCheckError ("IMPOSSIBLE", (-1, -1)))
     | CsNode {parent; children; context } -> current_scope := parent
 
 
@@ -163,19 +163,21 @@ let rec type_check_prog prog =
 
 and type_check_decl d =
     match d with
-    | VariableDeclaration vds                 -> List.iter type_check_vd vds
-    | TypeDeclaration tds                     -> List.iter type_check_td tds
-    | FunctionDeclaration (id, prms, tso, ss) -> type_check_fd(id, prms, tso, ss)
+    | VariableDeclaration (vds, pos)                 -> List.iter (fun vd -> type_check_vd vd pos) vds
+    | TypeDeclaration (tds, pos)                     -> List.iter type_check_td tds
+    | FunctionDeclaration (id, prms, tso, ss, pos) -> type_check_fd(id, prms, tso, ss)
 
-and type_check_vd (ids, tso, eso) =
-    List.iter (fun (Identifier str) -> 
-                        (match str with 
-                        | "main" | "init" -> raise (TypeCheckError "init and main cannot be used for var declarations")
-                        | _ -> err_if_id_in_current_scope (Identifier str)); ();) ids;
+and type_check_vd (ids, tso, eso) pos =
+    let f (Identifier (str, pos)) =
+        match str with
+        | "main" | "init" -> raise (TypeCheckError ("variables cannot be named 'init' or 'main'", pos))
+        | _ -> err_if_id_in_current_scope (Identifier (str, pos)); () in
+    List.iter f ids;
+    
     let glt =
         match tso, eso with
         | None, None -> (* not possible, parser prevents *)
-            raise (TypeCheckParserError "tso and eso both None")
+            raise (TypeCheckParserError ("variable declaration requires type of initial value", pos))
         | Some ts, None ->
             type_check_ts ts
         | None, Some es ->
@@ -184,54 +186,62 @@ and type_check_vd (ids, tso, eso) =
             if (let bs = List.map ((=) h) e_glts in
                List.fold_left (fun acc b -> (acc && b)) true bs)
             then h
-            else raise (TypeCheckError "vardec: explist contains multiple types")
+            else raise (TypeCheckError ("vardec: explist contains multiple types", pos))
         | Some ts, Some es ->
             let t_glt = type_check_ts ts in
             let e_glts = List.map type_check_e es in
             if (let bs = List.map ((=) t_glt) e_glts in
                List.fold_left (fun acc b -> (acc && b)) true bs)
             then t_glt
-            else raise (TypeCheckError "vardec: explist type != declared type") in
-    let add_id_to_scope (Identifier str) =
+            else raise (TypeCheckError ("vardec: explist type != declared type", pos)) in
+
+    let add_id_to_scope (Identifier (str, pos)) =
         if str = "_" then () else Hashtbl.add (context !current_scope) str (T.Variable, glt) in
     List.iter add_id_to_scope ids
 
-and type_check_ts ts = (* return the checked type *)
+and type_check_ts ?(type_dec=(false,(0,0))) ts = (* return the checked type *)
     match ts with
-    | IdentifierType (Identifier str) as idt ->
+    | IdentifierType (Identifier (str, pos)) as idt ->
         err_if_type_not_declared idt;
-        T.NamedT str
-    | ArrayTypeLiteral (es, ts) ->
+        if fst type_dec then T.NamedT (str, snd type_dec) else
+        let pos =
+            match snd (get_vcat_gltype_from_str str pos) with
+            | T.NamedT (_, pos) -> pos
+            | _                 -> (-1,-1) in
+        T.NamedT (str, pos)
+    | ArrayTypeLiteral (es, ts, pos) ->
         (match es with
-        | LitInt i -> ArrayT (i, type_check_ts ts)
-        | _        -> raise (TypeCheckParserError "array needs int within '[ ]'"))
-    | SliceTypeLiteral ts ->
-        SliceT (type_check_ts ts)
-    | StructTypeLiteral stds ->
-        let strs, tss = List.split stds in
-        if dup_exists strs then raise (TypeCheckError "duplicate field names") else ();
-        let type_check_std (Identifier str, ts) =
-            (str, (type_check_ts ts)) in
+        | LitInt (i, _) -> ArrayT (i, type_check_ts ~type_dec ts)
+        | _  -> raise (TypeCheckParserError ("array needs int within '[ ]'", pos)))
+    | SliceTypeLiteral (ts, pos) ->
+        SliceT (type_check_ts ~type_dec ts)
+    | StructTypeLiteral (stds, pos) ->
+        let ids, tss = List.split stds in
+        let strs = (List.map (fun (Identifier (str, pos)) -> str) ids) in
+        if dup_exists strs then raise (TypeCheckError ("duplicate field names in struct", pos)) else ();
+        let type_check_std (Identifier (str, pos), ts) =
+            (str, (type_check_ts ~type_dec ts)) in
         StructT (List.map type_check_std stds)
 
-and type_check_td (((Identifier str) as id), ts) =
+and type_check_td (((Identifier (str, pos)) as id), ts) =
     (match str with 
-    | "main" | "init" -> raise (TypeCheckError "init and main cannot be used for type declarations")
-    | _ -> err_if_id_in_current_scope (Identifier str));
-    let glt = type_check_ts ts in
+    | "main" | "init" -> raise (TypeCheckError ("types cannot be named 'init' or 'main'", pos))
+    | _ -> err_if_id_in_current_scope (Identifier (str, pos)));
+    let glt = type_check_ts ~type_dec:(true,pos) ts in
     Hashtbl.add (context !current_scope) str (T.Type, glt)
 
-and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
-   
-    (match Identifier str with 
-    | Identifier "init" -> 
-        (match prms , tso with
+and type_check_fd (Identifier (str, pos) as id, Parameters prms, tso, ss) =
+    (match Identifier (str, pos) with 
+    | Identifier ("init", _) -> 
+        (match prms, tso with
         |  [] , None -> () 
-        | _, _ -> raise (TypeCheckError "Init and main types should not have return or any parameters") ); ()
-    | Identifier "main" ->
+        | _, _ -> raise (TypeCheckError ("init functions must have no args and return void", pos)));
+        ()
+    | Identifier ("main", _) ->
         (match prms , tso with
         |  [] , None -> err_if_id_in_current_scope id; () 
-        | _, _ -> raise (TypeCheckError "Init and main types should not have return or any parameters") ); ()
+        | _, _ -> raise (TypeCheckError ("main function must have no args and return void", pos)));
+        ()
     | _ ->  err_if_id_in_current_scope id; ());
     
     let idss, tss = List.split prms in
@@ -240,25 +250,31 @@ and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
     Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type));
     create_and_enter_child_scope ();
     curr_ret_val := ret_type;
+
     let add_ids_to_scope (ids, glt) =
-        List.iter (fun (Identifier str) -> if str = "_" then () else err_if_id_in_current_scope (Identifier str); Hashtbl.add (context !current_scope) str (T.Variable, glt)) ids in
+        let f ((Identifier (str, pos)) as id) =
+            if str = "_" then ()
+            else err_if_id_in_current_scope id;
+            Hashtbl.add (context !current_scope) str (T.Variable, glt) in
+        List.iter f ids in
     List.iter add_ids_to_scope (List.combine idss prm_types);
-    (*List.iter (fun s -> type_check_stmt s; ()) ss;*)
-    if ret_type <> !(type_check_stmts ss) then 
+
+    (*NEED TO DECIDE  WHETHER RETURN HOLDS THE POS TOO IF SO WE NEED TO THINK ON IT *)
+    if ret_type <> type_check_stmts ss ret_type then 
        (if ((!temp_ret = ret_type) && (!tag_ret = 0)) then (temp_ret := T.Void;) 
-        else raise (TypeCheckError "Return type not match"))             
+        else raise (TypeCheckError ("Return type not match", pos)))             
     (*Now it matches the return type --> Now to check if there is any conflict of return types *)
     else if !tag_ret = 2 then
         (tag_ret := 0;
         temp_ret := T.Void; 
-        raise (TypeCheckError "Return type not match"))    
+        raise (TypeCheckError ("Return type not match", pos)))    
     else if !tag_ret = 1 then 
         ( tag_ret := 0;
         temp_ret := T.Void; )
     else if !tag_ret = 3 then
         (tag_ret := 0;
         temp_ret := T.Void;
-        raise (TypeCheckError "Return types at places do not match the return type of fucntion");)
+        raise (TypeCheckError ("Return types at places do not match the return type of fucntion", pos));)
     else ();
     
     enter_parent_scope();
@@ -266,71 +282,72 @@ and type_check_fd (Identifier str as id, Parameters prms, tso, ss) =
 and type_check_e e =
     match e with
     (* literals *)
-    | LitInt i -> NamedT "int"
-    | LitFloat f -> NamedT "float64"
-    | LitBool b -> NamedT "bool"
-    | LitRune r -> NamedT "rune"
-    | LitString s -> NamedT "string"
-    | LitRawString s -> NamedT "string"
+    (* LET THE POS FOR THE NAMED TYPE FOR LITERALS BE (-1, -1) *)
+    | LitInt (i, _)       -> NamedT ("int", (-1, -1))
+    | LitFloat (f, _)     -> NamedT ("float64", (-1, -1))
+    | LitBool (b, _)      -> NamedT ("bool", (-1, -1))
+    | LitRune (r, _)      -> NamedT ("rune", (-1, -1))
+    | LitString (s, _)    -> NamedT ("string", (-1, -1))
+    | LitRawString (s, _) -> NamedT ("string", (-1, -1))
     (* identifier expression *)
     | IdentifierExpression idexp -> type_check_idexp idexp
     (* unary expression *)
-    | Uplus e  -> type_check_e e |> pt_if_rt is_numT nummsg
-    | Uminus e -> type_check_e e |> pt_if_rt is_numT nummsg
-    | Uxor e   -> type_check_e e |> pt_if_rt is_intT intmsg
-    | Not e    -> type_check_e e |> pt_if_rt is_BoolT "BoolT"
+    | Uplus (e, pos)  -> ((type_check_e e), (get_pos_e e)) |> (pt_if_rt is_numT nummsg)
+    | Uminus (e, pos) -> ((type_check_e e), (get_pos_e e)) |> pt_if_rt is_numT nummsg
+    | Uxor (e, pos)   -> ((type_check_e e), (get_pos_e e)) |> pt_if_rt is_intT intmsg
+    | Not (e, pos)    -> ((type_check_e e), (get_pos_e e)) |> pt_if_rt is_BoolT "BoolT"
     (* binary expression *)
-    | Or (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_BoolT "BoolT")
-    | And (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_BoolT "BoolT")
-    | Eq (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_cmpT cmpmsg) |> pt_if_never_slice |> (fun x -> T.NamedT "bool")
-    | Neq (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_cmpT cmpmsg) |> pt_if_never_slice |> (fun x -> T.NamedT "bool")
-    | Gt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.NamedT "bool")
-    | Gteq (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.NamedT "bool")
-    | Lt (e1, e2)    -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.NamedT "bool")
-    | Lteq (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)   |> (fun x -> T.NamedT "bool")
-    | Plus (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_ordT ordmsg)
-    | Minus (e1, e2) -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_numT nummsg)
-    | Mult (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_numT nummsg)
-    | Div (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_numT nummsg)
-    | Mod (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
-    | Bor (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
-    | Band (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
-    | Xor (e1, e2)   -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
-    | Nand (e1, e2)  -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
-    | Lshft (e1, e2) -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
-    | Rshft (e1, e2) -> pt_if_type_check_eq e1 e2 |> (pt_if_rt is_intT intmsg)
+    | Or (e1, e2, pos)    -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_BoolT "BoolT")
+    | And (e1, e2, pos)   -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_BoolT "BoolT")
+    | Eq (e1, e2, pos)    -> (((pt_if_type_check_eq e1 e2, get_pos_e e1) |> pt_if_rt is_cmpT cmpmsg), get_pos_e e1) |> pt_if_never_slice |> (fun x -> T.NamedT ("bool", (-1,-1)))
+    | Neq (e1, e2, pos)   -> (((pt_if_type_check_eq e1 e2, get_pos_e e1) |> pt_if_rt is_cmpT cmpmsg), get_pos_e e1) |> pt_if_never_slice |> (fun x -> T.NamedT ("bool", (-1,-1)))
+    | Gt (e1, e2, pos)    -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_ordT ordmsg) |> (fun x -> T.NamedT ("bool", (-1,-1)))
+    | Gteq (e1, e2, pos)  -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_ordT ordmsg) |> (fun x -> T.NamedT ("bool", (-1,-1)))
+    | Lt (e1, e2, pos)    -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_ordT ordmsg) |> (fun x -> T.NamedT ("bool", (-1,-1)))
+    | Lteq (e1, e2, pos)  -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_ordT ordmsg) |> (fun x -> T.NamedT ("bool", (-1,-1)))
+    | Plus (e1, e2, pos)  -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_ordT ordmsg)
+    | Minus (e1, e2, pos) -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_numT nummsg)
+    | Mult (e1, e2, pos)  -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_numT nummsg)
+    | Div (e1, e2, pos)   -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_numT nummsg)
+    | Mod (e1, e2, pos)   -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
+    | Bor (e1, e2, pos)   -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
+    | Band (e1, e2, pos)  -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
+    | Xor (e1, e2, pos)   -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
+    | Nand (e1, e2, pos)  -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
+    | Lshft (e1, e2, pos) -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
+    | Rshft (e1, e2, pos) -> (pt_if_type_check_eq e1 e2, get_pos_e e1) |> (pt_if_rt is_intT intmsg)
     (* function calls *)
-    | Append (e1, e2) ->
+    | Append (e1, e2, pos) ->
         let t = type_check_e e1 in
         (match rt t with
-        | T.SliceT glt -> if glt = type_check_e e2 then t else raise (TypeCheckError "appended type != slice type")
-        | _ -> raise (TypeCheckError "cannot append to non-slice"))
-    | Cap e ->
+        | T.SliceT glt -> if glt = type_check_e e2 then t else raise (TypeCheckError ("appended type != slice type", pos))
+        | _ -> raise (TypeCheckError ("cannot append to non-slice", pos)))
+    | Cap (e, pos) ->
         (match rt (type_check_e e) with
-        | T.ArrayT (_,_) | T.SliceT _ -> T.NamedT "int"
-        | _                           -> raise (TypeCheckError "cap only defined for array, slice"))
-    | Len e ->
+        | T.ArrayT (_,_) | T.SliceT _ -> T.NamedT ("int", (-1,-1))
+        | _                           -> raise (TypeCheckError ("cap only defined for array, slice", pos)))
+    | Len (e, pos) ->
         (match rt (type_check_e e) with
-        | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.NamedT "int"
-        | _                                       -> raise (TypeCheckError "len only defined for array, slice, string"))
-    | FunctionCall ((Identifier str), es) ->
-        let cat, glt = get_vcat_gltype_from_str str in
+        | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.NamedT ("int", (-1,-1))
+        | _                                       -> raise (TypeCheckError ("len only defined for array, slice, string", pos)))
+    | FunctionCall ((Identifier (str, pos1)), es, pos2) ->
+        let cat, glt = get_vcat_gltype_from_str str pos1 in
         (match cat with
         | T.Variable ->
             (match glt with
             | T.FunctionT (arg_glts, ret_glt) ->
-                err_if (arg_glts <> List.map type_check_e es) (TypeCheckError "arg types given != expected"); ret_glt
-            | _ -> raise (TypeCheckError (str^" is not a function")))
+                err_if (arg_glts <> List.map type_check_e es) (TypeCheckError ("arg types given != expected", pos1)); ret_glt
+            | _ -> raise (TypeCheckError (str^" is not a function", pos1)))
         | T.Type -> (* type cast *)
             let rt_caster, rt_castee = (rt glt), (rt (type_check_e (List.hd es))) in
-            ignore (List.map (pt_if_rt is_basT basmsg) [rt_caster; rt_castee]);
+            ignore (List.map (pt_if_rt is_basT basmsg) [(rt_caster,pos1); (rt_castee,get_pos_e (List.hd es))]);
             (match rt_caster, rt_castee with
             | T.StringT,_ when is_intT rt_castee                      -> T.NamedT str
             | _,        _ when is_numT rt_caster && is_numT rt_castee -> T.NamedT str
             | _,        _ when rt_caster = rt_castee                  -> T.NamedT str
             | _,_ -> raise (TypeCheckError "invalid type cast")))
     (* parentheses *)
-    | ParenExpression e -> type_check_e e
+    | ParenExpression (e, pos) -> type_check_e e
 
 and pt_if_type_check_eq e1 e2 =
     let t1, t2 = (type_check_e e1), (type_check_e e2) in
@@ -347,13 +364,13 @@ and type_check_idexp idexp =
         | FunctionT (para, ret) -> raise ( TypeCheckError "Cannot index function calls")
         | _ -> (err_if (cat=T.Type) (TypeCheckError "")));
         glt)
-    | Indexed (e1, e2) ->
-        type_check_e e2 |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
+    | Indexed (e1, e2, pos) ->
+        (type_check_e e2, get_pos_e e2) |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
         (match rt (type_check_e e1) with
         | T.SliceT glt | T.ArrayT (_, glt) -> glt
         | _ -> raise (TypeCheckError ""))
     | StructAccess (e, str) ->
-        (match (type_check_e e |> (pt_if_rt is_StructT sctmsg) |> rt) with
+        (match ((type_check_e e, get_pos_e e) |> (pt_if_rt is_StructT sctmsg) |> rt) with
         | T.StructT stds ->
             let f acc (str',glt) =
                 if acc <> None then acc else
@@ -364,9 +381,9 @@ and type_check_idexp idexp =
             | None     -> raise (TypeCheckError ("struct does not have field "^str)))
         | _  -> raise (TypeCheckError "cannot access field of non-struct"))
 
-and type_check_stmt s =
+and type_check_stmt s outer_ret_glt =
     match s with
-    | ExpressionStatement e -> type_check_e e; T.Void
+    | ExpressionStatement e -> type_check_e e; None
     | AssignmentStatement (es1, aop, es2) ->
         if (List.length es1)<>(List.length es2) then
         raise (TypeCheckError "multiple assignment size mismatch") else ();
@@ -382,11 +399,11 @@ and type_check_stmt s =
         List.iter f (List.combine es1 es2);
         if (List.length es1 <> 1) && (aop <> ASG) then
         raise (TypeCheckError "cannot use shorthand operators in multiple assignment") else ();
-        T.Void
+        None
     | ReturnStatement eo -> 
         (match eo with 
-        | None -> T.Void
-        | Some e -> type_check_e e)
+        | None -> None
+        | Some e -> Some (type_check_e e))
     | ShortValDeclaration (ids, es) -> 
         if (List.length ids) = (List.length es) then ()
         else raise (TypeCheckError "multiple assignment size mismatch");
@@ -413,51 +430,47 @@ and type_check_stmt s =
         List.iter f (List.combine ids es) );
         if !if_at_least_one = 0 then 
             raise (TypeCheckError "At least one of the expressions on the LHS must be defined") else ();
-        T.Void            
+        None
     | BlockStatements ss ->
         create_and_enter_child_scope ();
         List.iter (fun s -> type_check_stmt s; ())  ss;
         enter_parent_scope();
-        T.Void
-    | DeclarationStatement d -> type_check_decl d; T.Void
-    | Inc e | Dec e -> type_check_e e |> (pt_if_rt is_numT nummsg); T.Void
+        None
+    | DeclarationStatement d -> type_check_decl d; None
+    | Inc e | Dec e -> (type_check_e e, get_pos_e e) |> (pt_if_rt is_numT nummsg); None
     | PrintStatement (es) | PrintlnStatement (es) ->
         (match es with
-        | None -> T.Void (*Do nothing *)
+        | None -> ()
         | Some es ->
-            let f e = ignore( type_check_e e |> (pt_if_rt (is_Ts (is_ordT :: [is_BoolT])) "Cannot print") ) in
-            List.iter f es;
-            T.Void);
-        T.Void
-    | Break | Continue | EmptyStatement -> T.Void (*Do nothing as trivial *)
-    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss)
-    | IfStatement ifclause -> type_check_ifst ifclause 
-    | SwitchStatement (s, eo, scl) -> type_check_switch (s, eo, scl); T.Void
-    | _ -> raise (TypeCheckError "")
+            let f e = ignore( (type_check_e e, get_pos_e e) |> (pt_if_rt (is_Ts (is_ordT :: [is_BoolT])) "Cannot print") ) in
+            List.iter f es);
+        None
+    | Break | Continue | EmptyStatement -> None
+    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss) outer_ret_glt
+    | IfStatement ifclause -> type_check_ifst ifclause outer_ret_glt
+    | SwitchStatement (s, eo, scl) -> type_check_switch (s, eo, scl) outer_ret_glt
+    | _ -> raise (TypeCheckError "IMPOSSIBLE")
 
 (*Subject to testing *)
-and type_check_for f =
+and type_check_for f outer_ret_glt =
     match f with
     | (EmptyStatement, None, EmptyStatement, ss) ->
         create_and_enter_child_scope ();
-        (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
         let tp = type_check_stmts ss in 
         enter_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
     | (EmptyStatement, Some e, EmptyStatement, ss) ->
-        type_check_e e |> pt_if_rt is_BoolT "BoolT";
+        (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
         create_and_enter_child_scope();
-        (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
         let tp = type_check_stmts ss in
         enter_parent_scope();
         if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
     | (i, Some e, p , ss) ->
         create_and_enter_child_scope ();
         type_check_stmt i;
-        type_check_e e |> pt_if_rt is_BoolT "BoolT";
+        (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
         type_check_stmt p;
         create_and_enter_child_scope () ;
-        (*List.iter  (fun s -> type_check_stmt s; ()) ss;*)
         let tp = type_check_stmts ss in 
         enter_parent_scope();
         enter_parent_scope();
@@ -473,14 +486,14 @@ and type_check_for f =
         if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void) 
     | _ -> raise (TypeCheckError "G")
 
-and type_check_ifst ic =
+and type_check_ifst ic outer_ret_glt =
     match ic with
     | If (s, e, ss, None) ->
         create_and_enter_child_scope();
         type_check_stmt s;
-        type_check_e e|> pt_if_rt is_BoolT "BoolT";
+        (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
         create_and_enter_child_scope ();
-        let tp = type_check_stmts ss in 
+        let tp = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
         enter_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
@@ -488,78 +501,77 @@ and type_check_ifst ic =
     | If (s, e, ss, Some els) ->
         create_and_enter_child_scope();
         type_check_stmt s;
-        type_check_e e|> pt_if_rt is_BoolT "BoolT";
+        (type_check_e e, get_pos_e, e) |> pt_if_rt is_BoolT "BoolT";
         create_and_enter_child_scope();
-        let tp = type_check_stmts ss in 
+        let tp = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
         if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void);
         (*print_int !tag_ret; T.Void;*)
         let ret_val =
             (match els with
-            | Elseif ifs -> type_check_ifst ifs;
+            | Elseif ifs -> type_check_ifst ifs outer_ret_glt ;
             | Else ss->
                 create_and_enter_child_scope();
-                let tp1 = type_check_stmts ss in 
+                let tp1 = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();      
                 if !tp1 = !curr_ret_val then !tp1 else (tr_asn tp; T.Void)) in
         enter_parent_scope();
         ret_val
        
-            
-
-and type_check_switch sw =
+and type_check_switch sw outer_ret_glt =
     match sw with
     | (s, None , swcl ) ->
         create_and_enter_child_scope();
-        type_check_stmt s;
+        type_check_stmt s outer_ret_glt;
         List.iter (
             fun swc -> match swc with
             | Default ss ->
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss in 
+                let tp = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); () 
+                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None); () 
             | Case (el, ss) ->
-                List.iter (fun e -> type_check_e e |> pt_if_rt is_BoolT "BoolT"; ()) el;
+                List.iter (fun e -> (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT"; ()) el;
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss in 
+                let tp = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void);
+                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None);
                 ()) swcl;
                 enter_parent_scope();
                 T.Void
     | (s, Some e, swcl) ->
         create_and_enter_child_scope();
-        type_check_stmt s;
-        type_check_e e |> pt_if_rt is_cmpT cmpmsg;
+        type_check_stmt s outer_ret_glt;
+        (type_check_e e, get_pos_e e) |> pt_if_rt is_cmpT cmpmsg;
         List.iter (fun swc -> match swc with
             | Default ss ->
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss in 
+                let tp = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void); ()
+                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None); ()
             | Case (el, ss) ->
                 List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss in 
+                let tp = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; T.Void) else (tr_asn tp; T.Void);
+                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None);
                 
                 ()) swcl;
             enter_parent_scope();
-            T.Void
+            None
 
-and type_check_stmts ss =
+and type_check_stmts ss outer_ret_glt =
     let last_i = (List.length ss)-1 in
-    let f (i,glt) s =
-        let next_glt = type_check_stmt s in
-        if next_glt <> T.Void && i <> last_i then
-            raise (TypeCheckError "dead code, return statement not last")
-        else (i+1,next_glt) in
-    ref (snd (List.fold_left f (0,T.Void) ss))
-
-and tr_asn t =
-    match !t with 
-    | T.Void -> if (!tag_ret = 0) then tag_ret := 1 else if (!tag_ret = 2) then tag_ret := 3 else ();
-    | _ -> if(!tag_ret = 0) then tag_ret := 2  else if (!tag_ret = 1) then tag_ret := 3 else ();
+    let f (i,glto) s =
+        let curr_glto = type_check_stmt s outer_ret_glt in
+        if i <> last_i && curr_glt <> None then
+            raise (TypeCheckError "unreachable code, return statement too early", pos)
+        else (i+1,curr_glto) in
+    let ss_glto = snd (List.fold_left f (0,None) ss) in
+    match ss_glto, outer_ret_glt with
+    | None,     T.Void -> None
+    | None,     _      -> raise (TypeCheckError ("no return statement but return type expected", pos)) (*TODO*)
+    | _,        T.Void -> raise (TypeCheckError ("return statement type should be void but isn't", pos)) (*TODO*)
+    | Some glt, _      -> if glt = outer_ret_glt then ()
+                          else raise (TypeCheckError ("returned type does not match declared type", ops)) (*TODO*)
     
