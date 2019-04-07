@@ -54,3 +54,14 @@ let dup_exists xs =
       | h1::(h2::_ as t) -> if h1 = h2 then true else f acc t
       | _ -> acc in
   f false (List.sort compare xs)
+
+let find_dup xs =
+  let rec f xs =
+      match xs with
+      | h1::(h2::_ as t) -> if h1 = h2 then h2 else f t
+      | _ -> raise (Failure "IMPOSSIBLE: no dups found") in
+  f (List.sort compare xs)
+
+let fst3 (one, two, three) = one
+let snd3 (one, two, three) = two
+let trd3 (one, two, three) = three

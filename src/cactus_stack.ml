@@ -6,7 +6,7 @@ type cs_node =
     | CsNode of {
         parent   : cs_node;
         children : cs_node list ref;
-        context  : (string, (T.vcat * T.gltype)) Hashtbl.t;
+        context  : (string, (T.vcat * T.gltype * (int*int))) Hashtbl.t;
       }
 
 exception CsRootHasNoContents
@@ -34,8 +34,10 @@ let add_child_scope csn_parent csn_child =
 let print_cs_node csn =
     let spaces n = String.make (n*4) ' ' in
     let p_tbl tbl indent =
-        let p_kv str (cat,glt) =
-            print_endline ((spaces indent)^str^": "^(T.string_of_vcat cat)^","^(T.string_of_glt glt)) in
+        let p_kv str (cat,glt,(ln,cn)) =
+            let pos = Helpers.z (ln,cn) in
+            let s = (spaces indent)^str^": "^(T.string_of_vcat cat)^","^(T.string_of_glt glt)^","^pos in
+            print_endline s in
         Hashtbl.iter p_kv tbl
     in
     let rec print_cs_node' indent csn =

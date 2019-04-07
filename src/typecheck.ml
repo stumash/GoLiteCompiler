@@ -6,16 +6,17 @@ module T = Golitetypes
 (* DATA STRUCTURES ------------------------------------------------------------------------------------ *)
 
 let root_context =
-    let ht : (string, (T.vcat * T.gltype)) Hashtbl.t = Hashtbl.create 8 in
+    (*        name     kind       type      pos *)
+    let ht : (string, (T.vcat * T.gltype * (int*int))) Hashtbl.t = Hashtbl.create 8 in
     (* builtin types *)
-    Hashtbl.add ht "int"     (T.Type,     T.IntT);
-    Hashtbl.add ht "float64" (T.Type,     T.FloatT);
-    Hashtbl.add ht "bool"    (T.Type,     T.BoolT);
-    Hashtbl.add ht "rune"    (T.Type,     T.RuneT);
-    Hashtbl.add ht "string"  (T.Type,     T.StringT);
+    Hashtbl.add ht "int"     (T.Type,     T.IntT,                     (-1,-1));
+    Hashtbl.add ht "float64" (T.Type,     T.FloatT,                   (-1,-1));
+    Hashtbl.add ht "bool"    (T.Type,     T.BoolT,                    (-1,-1));
+    Hashtbl.add ht "rune"    (T.Type,     T.RuneT,                    (-1,-1));
+    Hashtbl.add ht "string"  (T.Type,     T.StringT,                  (-1,-1));
     (* literals *)
-    Hashtbl.add ht "true"    (T.Constant, T.NamedT ("bool", (-1,-1)));
-    Hashtbl.add ht "false"   (T.Constant, T.NamedT ("bool", (-1,-1)));
+    Hashtbl.add ht "true"    (T.Constant, T.NamedT ("bool", (-1,-1)), (-1,-1));
+    Hashtbl.add ht "false"   (T.Constant, T.NamedT ("bool", (-1,-1)), (-1,-1));
     ht
 
 let root_scope = CsNode {
@@ -69,20 +70,20 @@ let basmsg  = "IntT, RuneT, FloatT, StringT, BoolT"
 let cmpmsg  = "IntT, RuneT, FloatT, StringT, BoolT, StructT, ArrayT"
 let sctmsg  = "StructT"
 
-let get_vcat_gltype_from_str str pos =
-    let rec get_vcat_gltype_from_str' str pos scope =
+let lookup str pos =
+    let rec lookup' str pos scope =
         try Hashtbl.find (context scope) str with
         | Not_found ->
             (match parent scope with
             | CsRoot -> raise (TypeCheckError (str ^ " not declared", pos))
-            | csn    -> get_vcat_gltype_from_str' str pos csn) in
-    get_vcat_gltype_from_str' str pos !current_scope
+            | csn    -> lookup' str pos csn) in
+    lookup' str pos !current_scope
 
 let rt glt =
     let rec rt' glt scope =
         match glt with
         | T.NamedT (str, pos) ->
-            (try rt' (snd (Hashtbl.find (context scope) str)) scope with
+            (try rt' (snd3 (Hashtbl.find (context scope) str)) scope with
             | Not_found ->
                 (match parent scope with
                 | CsRoot -> raise (TypeCheckError (str^" not declared", pos))
@@ -117,7 +118,7 @@ let err_if_id_in_current_scope (Identifier (str, pos)) =
 let err_if_id_not_declared ?f:(op=0) ?(check=(fun a b -> b)) (Identifier (str, pos)) =
     let rec err_if_id_not_declared' str scope =
         try
-            let (cat, glt) = Hashtbl.find (context scope) str in
+            let (cat, glt, pos) = Hashtbl.find (context scope) str in
             check cat glt
         with
         | Not_found ->
@@ -196,39 +197,35 @@ and type_check_vd (ids, tso, eso) pos =
             else raise (TypeCheckError ("vardec: explist type != declared type", pos)) in
 
     let add_id_to_scope (Identifier (str, pos)) =
-        if str = "_" then () else Hashtbl.add (context !current_scope) str (T.Variable, glt) in
+        if str = "_" then () else Hashtbl.add (context !current_scope) str (T.Variable, glt, pos) in
     List.iter add_id_to_scope ids
 
-and type_check_ts ?(type_dec=(false,(0,0))) ts = (* return the checked type *)
+and type_check_ts ts = (* return the checked type *)
     match ts with
     | IdentifierType (Identifier (str, pos)) as idt ->
         err_if_type_not_declared idt;
-        if fst type_dec then T.NamedT (str, snd type_dec) else
-        let pos =
-            match snd (get_vcat_gltype_from_str str pos) with
-            | T.NamedT (_, pos) -> pos
-            | _                 -> (-1,-1) in
+        let pos = trd3 (lookup str pos) in 
         T.NamedT (str, pos)
     | ArrayTypeLiteral (es, ts, pos) ->
         (match es with
-        | LitInt (i, _) -> ArrayT (i, type_check_ts ~type_dec ts)
+        | LitInt (i, _) -> ArrayT (i, type_check_ts ts)
         | _  -> raise (TypeCheckParserError ("array needs int within '[ ]'", pos)))
     | SliceTypeLiteral (ts, pos) ->
-        SliceT (type_check_ts ~type_dec ts)
+        SliceT (type_check_ts ts)
     | StructTypeLiteral (stds, pos) ->
         let ids, tss = List.split stds in
         let strs = (List.map (fun (Identifier (str, pos)) -> str) ids) in
         if dup_exists strs then raise (TypeCheckError ("duplicate field names in struct", pos)) else ();
         let type_check_std (Identifier (str, pos), ts) =
-            (str, (type_check_ts ~type_dec ts)) in
+            (str, (type_check_ts ts)) in
         StructT (List.map type_check_std stds)
 
-and type_check_td (((Identifier (str, pos)) as id), ts) =
+and type_check_td (((Identifier (str, pos))), ts) =
     (match str with 
     | "main" | "init" -> raise (TypeCheckError ("types cannot be named 'init' or 'main'", pos))
     | _ -> err_if_id_in_current_scope (Identifier (str, pos)));
-    let glt = type_check_ts ~type_dec:(true,pos) ts in
-    Hashtbl.add (context !current_scope) str (T.Type, glt)
+    let glt = type_check_ts ts in
+    Hashtbl.add (context !current_scope) str (T.Type, glt, pos)
 
 and type_check_fd (Identifier (str, pos) as id, Parameters prms, tso, ss) =
     (match Identifier (str, pos) with 
@@ -247,7 +244,7 @@ and type_check_fd (Identifier (str, pos) as id, Parameters prms, tso, ss) =
     let idss, tss = List.split prms in
     let prm_types = List.map type_check_ts tss in
     let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
-    Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type));
+    Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type), pos);
     create_and_enter_child_scope ();
     curr_ret_val := ret_type;
 
@@ -255,27 +252,15 @@ and type_check_fd (Identifier (str, pos) as id, Parameters prms, tso, ss) =
         let f ((Identifier (str, pos)) as id) =
             if str = "_" then ()
             else err_if_id_in_current_scope id;
-            Hashtbl.add (context !current_scope) str (T.Variable, glt) in
+            Hashtbl.add (context !current_scope) str (T.Variable, glt, pos) in
         List.iter f ids in
     List.iter add_ids_to_scope (List.combine idss prm_types);
 
-    (*NEED TO DECIDE  WHETHER RETURN HOLDS THE POS TOO IF SO WE NEED TO THINK ON IT *)
-    if ret_type <> type_check_stmts ss ret_type then 
-       (if ((!temp_ret = ret_type) && (!tag_ret = 0)) then (temp_ret := T.Void;) 
-        else raise (TypeCheckError ("Return type not match", pos)))             
-    (*Now it matches the return type --> Now to check if there is any conflict of return types *)
-    else if !tag_ret = 2 then
-        (tag_ret := 0;
-        temp_ret := T.Void; 
-        raise (TypeCheckError ("Return type not match", pos)))    
-    else if !tag_ret = 1 then 
-        ( tag_ret := 0;
-        temp_ret := T.Void; )
-    else if !tag_ret = 3 then
-        (tag_ret := 0;
-        temp_ret := T.Void;
-        raise (TypeCheckError ("Return types at places do not match the return type of fucntion", pos));)
-    else ();
+    (match type_check_stmts ss ret_type with
+    | None ->
+        if ret_type = T.Void then ()
+        else raise (TypeCheckError ("function is not void but lacks correct return statement", pos))
+    | _ -> ());
     
     enter_parent_scope();
 
@@ -331,7 +316,7 @@ and type_check_e e =
         | T.ArrayT (_,_) | T.SliceT _ | T.StringT -> T.NamedT ("int", (-1,-1))
         | _                                       -> raise (TypeCheckError ("len only defined for array, slice, string", pos)))
     | FunctionCall ((Identifier (str, pos1)), es, pos2) ->
-        let cat, glt = get_vcat_gltype_from_str str pos1 in
+        let cat, glt, pos = lookup str pos1 in
         (match cat with
         | T.Variable ->
             (match glt with
@@ -342,34 +327,35 @@ and type_check_e e =
             let rt_caster, rt_castee = (rt glt), (rt (type_check_e (List.hd es))) in
             ignore (List.map (pt_if_rt is_basT basmsg) [(rt_caster,pos1); (rt_castee,get_pos_e (List.hd es))]);
             (match rt_caster, rt_castee with
-            | T.StringT,_ when is_intT rt_castee                      -> T.NamedT str
-            | _,        _ when is_numT rt_caster && is_numT rt_castee -> T.NamedT str
-            | _,        _ when rt_caster = rt_castee                  -> T.NamedT str
-            | _,_ -> raise (TypeCheckError "invalid type cast")))
+            | T.StringT,_ when is_intT rt_castee                      -> T.NamedT (str, pos)
+            | _,        _ when is_numT rt_caster && is_numT rt_castee -> T.NamedT (str, pos)
+            | _,        _ when rt_caster = rt_castee                  -> T.NamedT (str, pos)
+            | _,_ -> raise (TypeCheckError ("invalid type cast", pos1))))
     (* parentheses *)
     | ParenExpression (e, pos) -> type_check_e e
 
 and pt_if_type_check_eq e1 e2 =
+    let pos1 = get_pos_e e1 in
     let t1, t2 = (type_check_e e1), (type_check_e e2) in
     if t1 = t2 then t1
     else
         let s1, s2 = (T.string_of_glt t1),(T.string_of_glt t2) in
-        raise (TypeCheckError (s1 ^ " not equal to " ^ s2))
+        raise (TypeCheckError (s1 ^ " not equal to " ^ s2, pos1))
 
 and type_check_idexp idexp =
     match idexp with
-    | Ident str ->
-        (let cat,glt = (get_vcat_gltype_from_str str) in
+    | Ident (str, pos) ->
+        (let cat,glt,_ = (lookup str pos) in
         (match glt with 
-        | FunctionT (para, ret) -> raise ( TypeCheckError "Cannot index function calls")
-        | _ -> (err_if (cat=T.Type) (TypeCheckError "")));
+        | FunctionT (para, ret) -> raise (TypeCheckError ("functions cannot be used as variables", pos))
+        | _ -> (err_if (cat=T.Type) (TypeCheckError ("types are not variables", pos))));
         glt)
     | Indexed (e1, e2, pos) ->
         (type_check_e e2, get_pos_e e2) |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
         (match rt (type_check_e e1) with
         | T.SliceT glt | T.ArrayT (_, glt) -> glt
-        | _ -> raise (TypeCheckError ""))
-    | StructAccess (e, str) ->
+        | _ -> raise (TypeCheckError ("can only index into slices and arrays", pos)))
+    | StructAccess (e, str, pos) ->
         (match ((type_check_e e, get_pos_e e) |> (pt_if_rt is_StructT sctmsg) |> rt) with
         | T.StructT stds ->
             let f acc (str',glt) =
@@ -378,39 +364,49 @@ and type_check_idexp idexp =
             let glto = List.fold_left f None stds in
             (match glto with
             | Some glt -> glt
-            | None     -> raise (TypeCheckError ("struct does not have field "^str)))
-        | _  -> raise (TypeCheckError "cannot access field of non-struct"))
+            | None     -> raise (TypeCheckError ("struct does not have field "^str, pos)))
+        | _  -> raise (TypeCheckError ("cannot access field of non-struct", pos)))
 
 and type_check_stmt s outer_ret_glt =
     match s with
-    | ExpressionStatement e -> type_check_e e; None
+    | ExpressionStatement (e, pos) -> type_check_e e; None
     | AssignmentStatement (es1, aop, es2) ->
+        let pos = get_pos_e (List.hd es1) in
         if (List.length es1)<>(List.length es2) then
-        raise (TypeCheckError "multiple assignment size mismatch") else ();
+        raise (TypeCheckError ("multiple assignment size mismatch", pos)) else ();
         let f (e1,e2) =
+            let pos = get_pos_e e1 in
             (match e1 with 
             | IdentifierExpression idexp ->
                 (match idexp with
-                | Ident str when str="_" -> type_check_e e2; ()
+                | Ident (str, pos) when str="_" -> type_check_e e2; ()
                 | _ ->
                     if (type_check_e e1) <> (type_check_e e2) then
-                    raise (TypeCheckError "assignment type mismatch") else ())
-            | _ -> raise (TypeCheckError "Cannot assign to an expression anything")) in
+                    let pos = get_pos_e e1 in
+                    raise (TypeCheckError ("assignment type mismatch", pos)) else ())
+            | _ -> raise (TypeCheckError ("invalid assignment left hand side", pos))) in
         List.iter f (List.combine es1 es2);
         if (List.length es1 <> 1) && (aop <> ASG) then
-        raise (TypeCheckError "cannot use shorthand operators in multiple assignment") else ();
+        let pos = get_pos_e (List.hd es1) in
+        raise (TypeCheckError ("cannot use shorthand operators in multiple assignment", pos)) else ();
         None
-    | ReturnStatement eo -> 
-        (match eo with 
-        | None -> None
-        | Some e -> Some (type_check_e e))
+    | ReturnStatement (eo, pos) -> 
+        let glt =
+            (match eo with 
+            | None -> T.Void
+            | Some e -> type_check_e e) in
+        if glt = outer_ret_glt then Some glt
+        else raise (TypeCheckError ("returned type doesn't not match declared return type", pos))
     | ShortValDeclaration (ids, es) -> 
-        if (List.length ids) = (List.length es) then ()
-        else raise (TypeCheckError "multiple assignment size mismatch");
-        if dup_exists ids then raise (TypeCheckError "duplicate ids") else ();
+        (if (List.length ids) = (List.length es) then () else
+            let Identifier (_,pos) = List.hd ids in
+            raise (TypeCheckError ("multiple assignment size mismatch", pos)));
+        (if not (dup_exists ids) then () else
+            let Identifier (str,pos) = find_dup ids in
+            raise (TypeCheckError ("duplicate ids: "^str, pos)));
         List.iter (fun e -> type_check_e e; ()) es;
         let if_at_least_one = ref 0 in
-        (let f (Identifier str as id, e) = 
+        (let f (Identifier (str,pos) as id, e) = 
             let id_type  = 
                 let check cat glt = glt in
                     err_if_id_not_declared ~f:1 ~check:check id in
@@ -420,158 +416,156 @@ and type_check_stmt s outer_ret_glt =
                 (if_at_least_one := 1;
                 let glt = type_check_e e in ();
                 (match glt with 
-                | T.Void -> raise (TypeCheckError "Void type cannot be assigned")
-                | _ -> Hashtbl.add (context !current_scope) str (T.Variable, glt));); 
+                | T.Void -> raise (TypeCheckError ("void type cannot be assigned (to "^str^")", pos))
+                | _ -> Hashtbl.add (context !current_scope) str (T.Variable, glt, pos));); 
                 ();
             | _ as glt ->
                 if glt <> type_check_e e then 
-                    raise (TypeCheckError "assignment type mismatch")
+                    raise (TypeCheckError ("assignment type mismatch", pos))
                 else () in
         List.iter f (List.combine ids es) );
-        if !if_at_least_one = 0 then 
-            raise (TypeCheckError "At least one of the expressions on the LHS must be defined") else ();
-        None
-    | BlockStatements ss ->
+        if !if_at_least_one <> 0 then None else
+        let Identifier (_,pos) = List.hd ids in
+        raise (TypeCheckError ("all ids in shorthand-assignment LHS cannot be already declared", pos))
+    | BlockStatements (ss, pos) ->
         create_and_enter_child_scope ();
-        List.iter (fun s -> type_check_stmt s; ())  ss;
+        let glto = type_check_stmts ss outer_ret_glt in
         enter_parent_scope();
-        None
+        glto
     | DeclarationStatement d -> type_check_decl d; None
     | Inc e | Dec e -> (type_check_e e, get_pos_e e) |> (pt_if_rt is_numT nummsg); None
-    | PrintStatement (es) | PrintlnStatement (es) ->
+    | PrintStatement (es, pos) | PrintlnStatement (es, pos) ->
         (match es with
         | None -> ()
         | Some es ->
             let f e = ignore( (type_check_e e, get_pos_e e) |> (pt_if_rt (is_Ts (is_ordT :: [is_BoolT])) "Cannot print") ) in
             List.iter f es);
         None
-    | Break | Continue | EmptyStatement -> None
-    | ForStatement (s1, eo, s2, ss)  -> type_check_for (s1, eo, s2, ss) outer_ret_glt
+    | Break _ | Continue _ | EmptyStatement -> None
+    | ForStatement (s1, eo, s2, ss, pos)  -> type_check_for (s1, eo, s2, ss) outer_ret_glt
     | IfStatement ifclause -> type_check_ifst ifclause outer_ret_glt
-    | SwitchStatement (s, eo, scl) -> type_check_switch (s, eo, scl) outer_ret_glt
-    | _ -> raise (TypeCheckError "IMPOSSIBLE")
+    | SwitchStatement (s, eo, scl, pos) -> type_check_switch (s, eo, scl) outer_ret_glt
+    | _ -> raise (TypeCheckError ("IMPOSSIBLE", (-1,-1)))
 
-(*Subject to testing *)
 and type_check_for f outer_ret_glt =
     match f with
     | (EmptyStatement, None, EmptyStatement, ss) ->
         create_and_enter_child_scope ();
-        let tp = type_check_stmts ss in 
+        let glto = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
-        if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
+        glto
     | (EmptyStatement, Some e, EmptyStatement, ss) ->
         (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
         create_and_enter_child_scope();
-        let tp = type_check_stmts ss in
+        let glto = type_check_stmts ss outer_ret_glt in
         enter_parent_scope();
-        if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
+        glto
     | (i, Some e, p , ss) ->
         create_and_enter_child_scope ();
-        type_check_stmt i;
+        type_check_stmt i outer_ret_glt;
         (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
-        type_check_stmt p;
+        type_check_stmt p outer_ret_glt;
         create_and_enter_child_scope () ;
-        let tp = type_check_stmts ss in 
+        let glto = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
         enter_parent_scope();
-        if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void)
-    (*TO ADD HERE ANOTHER CASE (stmt, None, None)*)
+        glto
     | (i, None , EmptyStatement , ss) ->
         create_and_enter_child_scope();
-        type_check_stmt i;
+        type_check_stmt i outer_ret_glt;
         create_and_enter_child_scope();
-        let tp = type_check_stmts ss in 
+        let glto = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
         enter_parent_scope();
-        if !tp = !curr_ret_val then T.Void else (tr_asn tp; T.Void) 
-    | _ -> raise (TypeCheckError "G")
+        glto
+    | _ -> raise (TypeCheckError ("IMPOSSIBLE", (-1,-1)))
 
 and type_check_ifst ic outer_ret_glt =
     match ic with
-    | If (s, e, ss, None) ->
+    | If (s, e, ss, None, pos) ->
         create_and_enter_child_scope();
-        type_check_stmt s;
+        type_check_stmt s outer_ret_glt;
         (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
         create_and_enter_child_scope ();
-        let tp = type_check_stmts ss outer_ret_glt in 
+        let glto = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
         enter_parent_scope();
-        if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void)
+        glto
         
-    | If (s, e, ss, Some els) ->
+    | If (s, e, ss, Some els, pos) ->
         create_and_enter_child_scope();
-        type_check_stmt s;
-        (type_check_e e, get_pos_e, e) |> pt_if_rt is_BoolT "BoolT";
+        type_check_stmt s outer_ret_glt;
+        (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT";
         create_and_enter_child_scope();
-        let tp = type_check_stmts ss outer_ret_glt in 
+        let glto1 = type_check_stmts ss outer_ret_glt in 
         enter_parent_scope();
-        if !tp = !curr_ret_val then !tp else (tr_asn tp; T.Void);
-        (*print_int !tag_ret; T.Void;*)
-        let ret_val =
+        let glto2 =
             (match els with
-            | Elseif ifs -> type_check_ifst ifs outer_ret_glt ;
-            | Else ss->
+            | Elseif (ifs, pos) -> type_check_ifst ifs outer_ret_glt
+            | Else (ss, pos)->
                 create_and_enter_child_scope();
-                let tp1 = type_check_stmts ss outer_ret_glt in 
-                enter_parent_scope();      
-                if !tp1 = !curr_ret_val then !tp1 else (tr_asn tp; T.Void)) in
+                let glto2 = type_check_stmts ss outer_ret_glt in 
+                enter_parent_scope();
+                glto2) in
         enter_parent_scope();
-        ret_val
+        if glto1 <> glto2 then None else glto1
        
 and type_check_switch sw outer_ret_glt =
     match sw with
-    | (s, None , swcl ) ->
+    | (s, None , swcs) ->
         create_and_enter_child_scope();
         type_check_stmt s outer_ret_glt;
-        List.iter (
-            fun swc -> match swc with
-            | Default ss ->
+        let f swc =
+            (match swc with
+            | Default (ss, pos) ->
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss outer_ret_glt in 
+                let glto = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None); () 
-            | Case (el, ss) ->
-                List.iter (fun e -> (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT"; ()) el;
+                glto
+            | Case (es, ss, pos) ->
+                List.iter (fun e -> (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT"; ()) es;
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss outer_ret_glt in 
+                let glto = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None);
-                ()) swcl;
-                enter_parent_scope();
-                T.Void
-    | (s, Some e, swcl) ->
+                glto) in
+        let gltos = List.map f swcs in
+        enter_parent_scope();
+        (); (* TODO: is any None, then None, or something *)
+        Some T.Void (* TODO *)
+    | (s, Some e, swcs) ->
         create_and_enter_child_scope();
         type_check_stmt s outer_ret_glt;
         (type_check_e e, get_pos_e e) |> pt_if_rt is_cmpT cmpmsg;
-        List.iter (fun swc -> match swc with
-            | Default ss ->
+        let f swc =
+            (match swc with
+            | Default (ss, pos) ->
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss outer_ret_glt in 
+                let glto = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None); ()
-            | Case (el, ss) ->
+                glto
+            | Case (el, ss, pos) ->
                 List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
                 create_and_enter_child_scope();
-                let tp = type_check_stmts ss outer_ret_glt in 
+                let glto = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope();
-                if !tp = !curr_ret_val then (temp_ret := !tp; None) else (tr_asn tp; None);
-                
-                ()) swcl;
-            enter_parent_scope();
-            None
+                glto) in
+        let gltos = List.map f swcs in
+        enter_parent_scope();
+        Some T.Void (* TODO *)
 
 and type_check_stmts ss outer_ret_glt =
     let last_i = (List.length ss)-1 in
     let f (i,glto) s =
         let curr_glto = type_check_stmt s outer_ret_glt in
-        if i <> last_i && curr_glt <> None then
-            raise (TypeCheckError "unreachable code, return statement too early", pos)
+        if i <> last_i && curr_glto <> None then
+            let pos =
+                match s with
+                | IfStatement (If (_, _, _, _, pos)) -> pos
+                | SwitchStatement (_, _, _, pos) -> pos
+                | ForStatement (_, _, _, _, pos) -> pos
+                | BlockStatements (_, pos) -> pos
+                | ReturnStatement (_, pos) -> pos
+                | _ -> raise (TypeCheckError ("IMPOSSIBLE", (-1,-1))) in
+            raise (TypeCheckError ("unreachable code, return statement too early", pos))
         else (i+1,curr_glto) in
-    let ss_glto = snd (List.fold_left f (0,None) ss) in
-    match ss_glto, outer_ret_glt with
-    | None,     T.Void -> None
-    | None,     _      -> raise (TypeCheckError ("no return statement but return type expected", pos)) (*TODO*)
-    | _,        T.Void -> raise (TypeCheckError ("return statement type should be void but isn't", pos)) (*TODO*)
-    | Some glt, _      -> if glt = outer_ret_glt then ()
-                          else raise (TypeCheckError ("returned type does not match declared type", ops)) (*TODO*)
-    
+    snd (List.fold_left f (0,None) ss)
