@@ -512,9 +512,12 @@ and type_check_ifst ic outer_ret_glt =
        
 and type_check_switch sw outer_ret_glt =
     match sw with
-    | (s, None , swcs) ->
+    | (s, eo , swcs) ->
         create_and_enter_child_scope ();
         type_check_stmt s outer_ret_glt;
+        (match eo with
+        | None   -> ()
+        | Some e -> (type_check_e e, get_pos_e e) |> pt_if_rt is_cmpT cmpmsg |> ignore);
         let f swc =
             (match swc with
             | Default (ss, pos) ->
@@ -523,7 +526,12 @@ and type_check_switch sw outer_ret_glt =
                 enter_parent_scope ();
                 glto,true
             | Case (es, ss, pos) ->
-                List.iter (fun e -> (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT"; ()) es;
+                (match eo with
+                | None ->
+                    let f e =
+                        (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT" |> ignore in
+                    List.iter f es
+                | Some e -> List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) es);
                 create_and_enter_child_scope ();
                 let glto = type_check_stmts ss outer_ret_glt in 
                 enter_parent_scope ();
@@ -531,30 +539,14 @@ and type_check_switch sw outer_ret_glt =
         let gltos_isdefs = List.map f swcs in
         enter_parent_scope ();
         let f (last_glt,hasdef) (glto,isdef) =
-            (* TODO, doesn't compile *)
+            (match (glto, isdef) with 
+            | (None, _) -> (None, if isdef then isdef else hasdef)
+            | (_, true) -> let new_glt = (if hasdef = false then None else glto) in (new_glt, true)
+            | (_, false) ->(last_glt, hasdef) )
             in
-        fst (List.fold_left f (None,false) gltos_isdefs)
-    | (s, Some e, swcs) ->
-        create_and_enter_child_scope();
-        type_check_stmt s outer_ret_glt;
-        (type_check_e e, get_pos_e e) |> pt_if_rt is_cmpT cmpmsg;
-        let f swc =
-            (match swc with
-            | Default (ss, pos) ->
-                create_and_enter_child_scope();
-                let glto = type_check_stmts ss outer_ret_glt in 
-                enter_parent_scope();
-                glto
-            | Case (el, ss, pos) ->
-                List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) el;
-                create_and_enter_child_scope();
-                let glto = type_check_stmts ss outer_ret_glt in 
-                enter_parent_scope();
-                glto) in
-        let gltos = List.map f swcs in
-        enter_parent_scope();
-        Some T.Void (* TODO *)
-
+        let (glt, hasdef) = (List.fold_left f (None,true) gltos_isdefs) in 
+        if hasdef = true then glt else None
+   
 and type_check_stmts ss outer_ret_glt =
     let last_i = (List.length ss)-1 in
     let f (i,glto) s =

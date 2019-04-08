@@ -8,7 +8,7 @@ let get_pos lexbuf = Lexing.(
 (* print the compiler stage that detected the error, and its cause *)
 let print_error lexbuf compiler_stage = Lexing.(
     let pos_lnum, pos_cnum = get_pos lexbuf in
-    Printf.eprintf "Error: '%s' at L%d,C%d: '%s'\n" (lexeme lexbuf) pos_lnum pos_cnum compiler_stage);
+    Printf.eprintf "Error: '%s'  '%s'\n" (lexeme lexbuf) compiler_stage);
     exit 1; ()
 
 exception LexerError

@@ -117,7 +117,7 @@ let rec get_pos_e = function
 (* binary expression *)
   | Or ( _ , _ , pos) -> pos
   | And ( _ , _ , pos) -> pos
-  | Eq ( _ , _ , pos) -> pos
+  | Eq ( _ , _ , pos) -> pos 
   | Neq ( _ , _ , pos) -> pos
   | Gt ( _ , _ , pos) -> pos
   | Gteq ( _ , _ , pos) -> pos
@@ -151,6 +151,7 @@ let rec get_pos_e = function
   | LitFloat ( _ , pos) -> pos
   | LitRune ( _ , pos) -> pos
   | LitInt ( _ , pos) -> pos
+  | LitString ( _, pos) -> pos
   | LitRawString ( _ , pos) -> pos
   | IdentifierExpression idexp -> get_pos_idexp idexp
 
