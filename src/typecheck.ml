@@ -40,11 +40,6 @@ let () =
 (* initialized to global scope, the only child of the root scope *)
 let current_scope = ref global_scope
 
-let curr_ret_val = ref T.Void 
-
-let tag_ret = ref 0
-let temp_ret = ref T.Void  
-
 (* HELPERS -------------------------------------------------------------------------------------------- *)
 
 let is_IntT t    = match t with | T.IntT -> true | _ -> false
@@ -246,7 +241,6 @@ and type_check_fd (Identifier (str, pos) as id, Parameters prms, tso, ss) =
     let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
     Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type), pos);
     create_and_enter_child_scope ();
-    curr_ret_val := ret_type;
 
     let add_ids_to_scope (ids, glt) =
         let f ((Identifier (str, pos)) as id) =
@@ -541,8 +535,8 @@ and type_check_switch sw outer_ret_glt =
         let f (last_glt,hasdef) (glto,isdef) =
             (match (glto, isdef) with 
             | (None, _) -> (None, if isdef then isdef else hasdef)
-            | (_, true) -> let new_glt = (if hasdef = false then None else glto) in (new_glt, true)
-            | (_, false) ->(last_glt, hasdef) )
+            | (_, true) -> let new_glt = (if hasdef = false then None else glto) in (new_glt, hasdef)
+            | (_, false) -> (last_glt, hasdef))
             in
         let (glt, hasdef) = (List.fold_left f (None,true) gltos_isdefs) in 
         if hasdef = true then glt else None
