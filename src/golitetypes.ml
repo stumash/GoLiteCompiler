@@ -3,6 +3,7 @@ type vcat =
     | Type
     | Constant
     | Variable
+    | Intd 
 
 (* all valid types in golite *)
 type gltype =
