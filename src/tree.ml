@@ -117,7 +117,7 @@ let rec get_pos_e = function
 (* binary expression *)
   | Or ( _ , _ , pos) -> pos
   | And ( _ , _ , pos) -> pos
-  | Eq ( _ , _ , pos) -> pos 
+  | Eq ( _ , _ , pos) -> pos
   | Neq ( _ , _ , pos) -> pos
   | Gt ( _ , _ , pos) -> pos
   | Gteq ( _ , _ , pos) -> pos

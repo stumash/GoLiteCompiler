@@ -66,7 +66,7 @@ let basmsg  = "IntT, RuneT, FloatT, StringT, BoolT"
 let cmpmsg  = "IntT, RuneT, FloatT, StringT, BoolT, StructT, ArrayT"
 let sctmsg  = "StructT"
 
-let lookup str pos =
+let lookup ?(current_scope=current_scope) str pos =
     let rec lookup' str pos scope =
         try Hashtbl.find (context scope) str with
         | Not_found ->

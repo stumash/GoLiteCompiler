@@ -42,7 +42,9 @@ let rec string_of_glt gt =
     | BoolT -> "BoolT"
     | RuneT -> "RuneT"
     | StringT -> "StringT"
-    | NamedT (str, (lineno, colno)) -> "NamedT( " ^ str ^ ", " ^ (string_of_int lineno) ^ ":" ^ (string_of_int colno) ^ " )"
+    | NamedT (str, (lineno, colno)) ->
+        let f (lineno, colno) = (string_of_int lineno)^":"^(string_of_int colno)
+        "NamedT( " ^ str ^ ", " ^ (f (lineno,colno)) ^ " )"
     | StructT stds ->
         "struct{ " ^ (string_of_strs (List.map string_of_std stds)) ^"}"
     | ArrayT (i, gt) ->
