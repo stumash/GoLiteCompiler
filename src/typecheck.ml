@@ -169,6 +169,10 @@ and type_check_decl d =
     | FunctionDeclaration (id, prms, tso, ss, pos) -> type_check_fd(id, prms, tso, ss)
 
 and type_check_vd (ids, tso, eso) pos =
+    
+    (if not (dup_exists ids) then () else
+            let Identifier (str,pos) = find_dup ids in
+            raise (TypeCheckError ("duplicate ids: "^str, pos)));
     let f (Identifier (str, pos)) =
         match str with
         | "main" | "init" -> raise (TypeCheckError ("variables cannot be named 'init' or 'main'", pos))
@@ -244,7 +248,8 @@ and type_check_fd (Identifier (str, pos) as id, Parameters prms, tso, ss) =
     let idss, tss = List.split prms in
     let prm_types = List.map type_check_ts tss in
     let ret_type = match tso with | None -> T.Void | Some ts -> type_check_ts ts in
-    Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type), pos);
+    if str = "_" then () 
+    else Hashtbl.add (context !current_scope) str (T.Variable, T.FunctionT (prm_types, ret_type), pos);
     create_and_enter_child_scope ();
 
     let add_ids_to_scope (ids, glt) =
@@ -274,7 +279,7 @@ and type_check_e e =
     | LitString (s, _)    -> NamedT ("string", (-1, -1))
     | LitRawString (s, _) -> NamedT ("string", (-1, -1))
     (* identifier expression *)
-    | IdentifierExpression idexp -> type_check_idexp idexp
+    | IdentifierExpression idexp ->  type_check_idexp idexp
     (* unary expression *)
     | Uplus (e, pos)  -> ((type_check_e e), (get_pos_e e)) |> (pt_if_rt is_numT nummsg)
     | Uminus (e, pos) -> ((type_check_e e), (get_pos_e e)) |> pt_if_rt is_numT nummsg
@@ -348,7 +353,7 @@ and type_check_idexp idexp =
         (let cat,glt,_ = (lookup str pos) in
         (match glt with 
         | FunctionT (para, ret) -> raise (TypeCheckError ("functions cannot be used as variables", pos))
-        | _ -> (err_if (cat=T.Type) (TypeCheckError ("types are not variables", pos))));
+        | _ -> if cat=T.Type then raise (TypeCheckError ("types are not variables", pos)) else ());
         glt)
     | Indexed (e1, e2, pos) ->
         (type_check_e e2, get_pos_e e2) |> (pt_if_rt is_intT intmsg) |> (fun x -> ());
