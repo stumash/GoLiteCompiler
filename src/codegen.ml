@@ -6,7 +6,12 @@ let p s = print_string s;
 
 let rec cg_program ast = 
   match ast with 
-  | Program (p, dl) -> List.iter cg_decl
+  | Program (p, dl) ->
+      p "#include <stdio.h>\n";
+      p "#include <string.h>\n";
+      p "#include <stdlib.h>\n";
+      p "\n";
+      List.iter cg_decl
   | EmptyProgram -> () 
   
 and cg_decl dec = 
