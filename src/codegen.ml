@@ -9,6 +9,7 @@ let p s = print_string s;
 (* print_indent indent_level *)
 let p_ind il = p (String.make (il * 2) ' ')
 
+
 let z (ln,cn) =
     if ln,cn = -2,-2 then "" else
     let f i = if i < 0 then "_"^(string_of_int (-1 * i)) else string_of_int i
@@ -55,16 +56,18 @@ and cg_id ?(il=0) (Identifier (str, pos)) =
     p (str^(z pos))
 
 (* print the type AND the associated identifier (for type or variable declarations) *)
-and cg_glt_id ?(il=0) glt id =
+and cg_glt_id ?(il=0) ?(intl=[]) glt id =
+    let p_intl intl = List.iter (fun i -> p "["; if i <> None then print_int i else (); p "]") intl in
     match glt with
-    | NamedT (str, pos) -> p_ind il; p str; p (z pos); p " "; cg_id id
+    | NamedT (str, pos) -> p_ind il; p str; p (z pos); p " "; cg_id id;  p_intl intl;
     | StructT stds ->
         let cg_std ?(il=0) (str,glt) =
             p_ind il; cg_glt_id glt (Identifier (str, (-2,-2))); p ";\n" in
         p "struct{\n";
-        List.iter (cd_std ~il:(il+1)) stds
-        p"}\n"
+        List.iter (cg_std ~il:(il+1)) stds
+        p"} "; 
+        cg_id id; p_intl intl; 
     | ArrayT (i, glt) ->
-        cg_glt_id glt id; 
+    cg_glt_id glt id ~intl:(intl @ [Some i]) 
 
 and cg_exp ?(il=0) e = () (* TODO *)
