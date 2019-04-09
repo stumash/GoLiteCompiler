@@ -45,6 +45,7 @@ let current_scope = ref global_scope
 let is_IntT t    = match t with | T.IntT -> true | _ -> false
 let is_FloatT t  = match t with | T.FloatT -> true | _ -> false
 let is_BoolT t   = match t with | T.BoolT -> true | _ -> false
+let is_bool t    = match t with | T.NamedT ("bool", (-1,-1)) -> true | _ -> false
 let is_RuneT t   = match t with | T.RuneT -> true | _ -> false
 let is_StringT t = match t with | T.StringT -> true | _ -> false
 let is_StructT t = match t with | T.StructT _ -> true | _ -> false
@@ -90,6 +91,10 @@ let rt glt =
 let pt_if_rt f msg (y, pos) =
     if f (rt y) then y
     else raise (TypeCheckError ("RT( "^(T.string_of_glt y)^" ) not in "^msg, pos))
+
+let pt_if f msg (y, pos) =
+    if f y then y
+    else raise (TypeCheckError ((T.string_of_glt y)^" is not in "^msg, pos))
 
 (* Pass-Through [y] If Resolved Type [of y is] is RECURSIVELY never T.SliceT *)
 let pt_if_never_slice (y, pos) =
@@ -318,6 +323,7 @@ and type_check_e e =
                 err_if (arg_glts <> List.map type_check_e es) (TypeCheckError ("arg types given != expected", pos1)); ret_glt
             | _ -> raise (TypeCheckError (str^" is not a function", pos1)))
         | T.Type -> (* type cast *)
+            if (List.length es) > 1 then raise (TypeCheckError ("can only cast one value at a time", pos1)) else ();
             let rt_caster, rt_castee = (rt glt), (rt (type_check_e (List.hd es))) in
             ignore (List.map (pt_if_rt is_basT basmsg) [(rt_caster,pos1); (rt_castee,get_pos_e (List.hd es))]);
             (match rt_caster, rt_castee with
@@ -523,7 +529,7 @@ and type_check_switch sw outer_ret_glt =
                 (match eo with
                 | None ->
                     let f e =
-                        (type_check_e e, get_pos_e e) |> pt_if_rt is_BoolT "BoolT" |> ignore in
+                        (type_check_e e, get_pos_e e) |> pt_if is_bool "bool" |> ignore in
                     List.iter f es
                 | Some e -> List.iter (fun e2 -> pt_if_type_check_eq e e2; ()) es);
                 create_and_enter_child_scope ();
