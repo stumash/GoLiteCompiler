@@ -4,11 +4,19 @@ open Helpers
 open Cactus_stack
 open Golitetypes
 
+
+
+
+(* build hashtbl that maps glt structs to names *)
+(*   - handle recursion + replacement during recursion *)
+(*   - update global scope with *)
+
+
+
+
 let p s = print_string s;
 
-(* print_indent indent_level *)
 let p_ind il = p (String.make (il * 2) ' ')
-
 
 let z (ln,cn) =
     if ln,cn = -2,-2 then "" else
