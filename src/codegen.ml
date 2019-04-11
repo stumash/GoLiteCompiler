@@ -16,19 +16,26 @@ let z (ln,cn) =
     let f i = if i < 0 then "_"^(string_of_int (-1 * i)) else string_of_int i in
     "_"^(f ln)^"_"^(f cn)
 
-let rec cg_glt_default str glt =
+let rec cg_glt_default ?(il=0) varname glt =
     match glt with
     | Void | FunctionT (_,_) -> raise (CodegenError "HOW YOU DO THIS TO ME?!")
-    | IntT                   -> str^" = 0"
-    | FloatT                 -> str^" = 0.0"
-    | BoolT                  -> str^" = False"
-    | RuneT                  -> str^" = 0"
-    | StringT                -> str^" = \"\""
-    | SliceT                 -> str^" = go_slice()"
-    | NamedT (str, pos)      -> cg_glt_default (rt glt)
-    | ArrayT (i,_)           -> ()
-    | StructT stds           -> ()
-
+    | IntT                   -> p_ind il; p (varname^" = 0")
+    | FloatT                 -> p_ind il; p (varname^" = 0.0")
+    | BoolT                  -> p_ind il; p (varname^" = False")
+    | RuneT                  -> p_ind il; p (varname^" = 0")
+    | StringT                -> p_ind il; p (varname^" = \"\"")
+    | SliceT _               -> p_ind il; p (varname^" = go_slice()")
+    | NamedT (str, pos)      -> cg_glt_default ~il varname (rt glt)
+    | ArrayT (i,glt)         ->
+        p_ind il; p "def make_array_element():\n";
+        cg_glt_default ~il:(il+1) "dummy_var" glt;
+        p_ind (il+1); p "return dummy_var\n";
+        p_ind il; p (varname^" = [make_array_element() for _ in range("^(string_of_int i)^")]\n")
+    | StructT stds           -> 
+        p_ind il; p (varname^" = go_struct()\n");
+        let f (f_name,glt) =
+            cg_glt_default ~il (varname^"."^f_name) glt in
+        List.iter f stds
 
 let current_scope = ref global_scope
 
@@ -56,19 +63,22 @@ and cg_decl ?(il=0) dec =
                 (match eso with
                 | Some es -> List.map (fun e -> Some e) es
                 | None    -> List.init (List.length ids) (fun i -> None)) in
-            let glts =
-                List.map (fun (Identifier (str, pos)) -> snd3 (lookup ~current_scope str pos)) ids in
-            let f (id, (glt, eo)) =
-                cg_id ~il id
+            let glts_pos =
+                let f (Identifier (str, pos)) =
+                    let (_, glt, pos) = lookup ~current_scope str pos in
+                    glt,pos in
+                List.map f ids in
+            let f ((Identifier (str,_) as id), ((glt,pos), eo)) =
                 (match eo with
-                | Some e -> p " = "; cg_exp e
-                | None   -> ());
-                p ";\n" in
-            List.iter f (List.combine ids (List.combine glts eos)) in
+                | Some e -> cg_id ~il id; p " = "; cg_exp e
+                | None   -> cg_glt_default ~il str glt);
+                p "\n" in
+            List.iter f (List.combine ids (List.combine glts_pos eos)) in
         List.iter cg_vd vds
     | TypeDeclaration (tds, _) -> ()
 
 and cg_id ?(il=0) (Identifier (str, pos)) =
+    p_ind il;
     if str = "_" then p ("_"^(z pos)) else
     let pos = trd3 (lookup ~current_scope str pos) in
     p (str^(z pos))
@@ -88,7 +98,7 @@ and cg_exp ?(il=0) e =
     | Bor (e1, e2, _) -> cg_exp e1; p " | "; cg_exp   e2
     | Xor (e1, e2, _) -> cg_exp e1; p " ^ "; cg_exp   e2
     | Mult (e1, e2, _) -> cg_exp e1; p " * "; cg_exp   e2
-    | Div (e1, e2, _) -> cg_exp e1; p " / "; cg_exp   e2
+    | Div (e1, e2, _) -> cg_exp e1; p " // "; cg_exp   e2
     | Mod (e1, e2, _) -> cg_exp e1; p " % "; cg_exp   e2
     | Lshft (e1, e2, _) -> cg_exp   e1; p " << "; cg_exp   e2
     | Rshft (e1, e2, _) -> cg_exp   e1; p " >> "; cg_exp   e2
@@ -99,9 +109,9 @@ and cg_exp ?(il=0) e =
     | Not (e, _) -> p " ! "; cg_exp   e (*Apparently not used I think *)
     | Uxor (e, _) -> p " ~ "; cg_exp e
     (*Now comes the literals *)
-    | LitInt (i, _) -> p i
+    | LitInt (i, _) -> p (string_of_int i)
     | LitBool (b, _) -> if b == true then p "True" else p "False"
-    | LitFloat (f, _) -> p f
+    | LitFloat (f, _) -> p (string_of_float f)
     | LitString (str, _) -> p str
     | LitRawString (str, _) -> p str
     | LitRune (r, _) -> p "ord (" ; p r; p ")"
@@ -120,16 +130,15 @@ and cg_exp ?(il=0) e =
         p ")"
     | IdentifierExpression ie -> () (* TODO *)
 
-
 and cg_stmt ?(il=0) stmt = 
     match stmt with 
     | PrintStatement (eso, _) ->  
-        p "print ("; 
-        match eso with 
+        p_ind il; p "print ("; 
+        (match eso with 
         | Some eso -> 
             let f e = cg_exp e; p ", " in
             List.iter f eso
-        | None -> ()
+        | None -> ());
         p " end = '' )\n"
     | PrintlnStatement (eso, _) -> 
         p "print ("; 
@@ -137,7 +146,7 @@ and cg_stmt ?(il=0) stmt =
         | Some eso -> 
             let f e = cg_exp e; p ", " in
             List.iter f eso
-        | None -> ())
+        | None -> ());
         p ")\n"
     | Inc e ->  cg_exp e; p " = "; cg_exp e; p " + 1 \n"
     | Dec e ->  cg_exp e; p " = "; cg_exp e; p " - 1 \n"
@@ -150,9 +159,9 @@ and cg_stmt ?(il=0) stmt =
         | None -> () );
         p "\n"
     | ExpressionStatement (e, _) -> cg_exp e; p "\n"
-    | DeclarationStatement dec -> cg_decl dec; (*Maybe print endline ?? *) 
-    | AssignmentStatement (es1, ao, es2) -> (*Symbol table issues ?? *)
-    | ShortValDeclaration (ids, es) -> (* SYmbol table issues ?? *)
+    | DeclarationStatement dec -> cg_decl dec (*Maybe print endline ?? *) 
+    | AssignmentStatement (es1, ao, es2) -> () (*Symbol table issues ?? *)
+    | ShortValDeclaration (ids, es) -> () (* SYmbol table issues ?? *)
     | IfStatement ifstmt -> () (*TODO *) 
     | ForStatement (s1, eso, s2, ss, _) -> () (*TODO*)
     | SwitchStatement (s, eso, swcl, _) -> () (*TODO*)

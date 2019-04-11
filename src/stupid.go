@@ -1,9 +1,15 @@
 package main
 
-func f() int {
-    return 5
-}
+var a int
 
-func main() {
-    a := f()
-}
+type num int
+
+var b num
+
+var c float64
+
+var d rune
+
+var e string
+
+var f []int
