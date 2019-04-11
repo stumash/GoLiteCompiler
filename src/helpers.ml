@@ -21,10 +21,12 @@ exception SwitchMultipleDefaults
 exception TypeCheckError of string * (int * int)
 exception TypeCheckParserError of string * (int * int)
 exception BreakContinueError of string * (int * int) 
+exception CodegenError of string
 
 let z (lineno,colno) = " at L" ^ (string_of_int lineno) ^ ",C" ^ (string_of_int colno)
 
 let handle_error ?(default="Default") lb = function
+    | CodegenError str                -> print_error lb @@ "Codegen: " ^ str
     | TypeCheckError (str, pos)       -> print_error lb @@ "TypeChecker: " ^ str ^ (z pos)
     | TypeCheckParserError (str, pos) -> print_error lb @@ "TypeChecker: ParserError: " ^ str ^ (z pos)
     | ExpressionIsNotIdentifier       -> print_error lb "Parser: exp is not ident"

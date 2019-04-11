@@ -6,7 +6,7 @@ cd "${THIS_DIR}"
 read -r -d '' helpstring <<-EOF
 	Usage: run.sh <mode> <infile>
 
-	mode: scan|tokens|parse|pretty|typecheck|symbol
+	mode: scan|tokens|parse|pretty|typecheck|symbol|codegen
 	infile: name of file to process
 EOF
 
@@ -14,8 +14,8 @@ mode="${1}"
 infile="${2}"
 
 # check for correct argument
-if [[ -z "${mode}" || ! "${mode}" =~ ^scan|tokens|parse|pretty|typecheck|symbol$ ]]; then
-    echo "ERROR: first argument <mode> must match ^scan|tokens|parse|pretty|typecheck|symbol$"
+if [[ -z "${mode}" || ! "${mode}" =~ ^scan|tokens|parse|pretty|typecheck|symbol|codegen$ ]]; then
+    echo "ERROR: first argument <mode> must match ^scan|tokens|parse|pretty|typecheck|symbol|codegen$"
     echo ""
     echo "$helpstring"
     exit 1
@@ -53,5 +53,8 @@ case "${mode}" in
         ;;
     "symbol")
         ./src/main_symbol.native < "${infile}"
+        ;;
+    "codegen")
+        ./src/main_codegen.native < "${infile}"
         ;;
 esac

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 class go_struct:
     pass
 
@@ -71,3 +69,4 @@ def cap(xs):
 # xs is a go_slice
 def append(xs, x):
     return xs.append(x)
+
