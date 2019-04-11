@@ -114,6 +114,7 @@ and cg_exp ?(il=0) e =
     | FunctionCall (Identifier (str, pos) as id, es, _) -> 
         (*Make an exception if its a type, as then it we should not print the id*)
         cg_id id; p "(";
+        (*Weird case *)
         let f e = (cg_exp e; p ", ") in 
         List.iter f es;
         p ")"
@@ -123,8 +124,39 @@ and cg_exp ?(il=0) e =
 and cg_stmt ?(il=0) stmt = 
     match stmt with 
     | PrintStatement (eso, _) ->  
-        p "print (";
-    | _ -> () (* TO BE CONTINUED *)
+        p "print ("; 
+        match eso with 
+        | Some eso -> 
+            let f e = cg_exp e; p ", " in
+            List.iter f eso
+        | None -> ()
+        p " end = '' )\n"
+    | PrintlnStatement (eso, _) -> 
+        p "print ("; 
+        (match eso with 
+        | Some eso -> 
+            let f e = cg_exp e; p ", " in
+            List.iter f eso
+        | None -> ())
+        p ")\n"
+    | Inc e ->  cg_exp e; p " = "; cg_exp e; p " + 1 \n"
+    | Dec e ->  cg_exp e; p " = "; cg_exp e; p " - 1 \n"
+    | Break _ -> p "break\n"
+    | Continue _ -> p "continue\n"
+    | ReturnStatement (eso, _) ->
+        p "return ";
+        (match eso with 
+        | Some es -> cg_exp es 
+        | None -> () );
+        p "\n"
+    | ExpressionStatement (e, _) -> cg_exp e; p "\n"
+    | DeclarationStatement dec -> cg_decl dec; (*Maybe print endline ?? *) 
+    | AssignmentStatement (es1, ao, es2) -> (*Symbol table issues ?? *)
+    | ShortValDeclaration (ids, es) -> (* SYmbol table issues ?? *)
+    | IfStatement ifstmt -> () (*TODO *) 
+    | ForStatement (s1, eso, s2, ss, _) -> () (*TODO*)
+    | SwitchStatement (s, eso, swcl, _) -> () (*TODO*)
+    | _ -> () (* Should be impossible  *)
 
      
     
