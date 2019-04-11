@@ -73,4 +73,59 @@ and cg_id ?(il=0) (Identifier (str, pos)) =
     let pos = trd3 (lookup ~current_scope str pos) in
     p (str^(z pos))
 
-and cg_exp ?(il=0) e = () (* TODO *)
+and cg_exp ?(il=0) e = 
+    match e with 
+    | Or (e1, e2, _) -> cg_exp e1; p " or "; cg_exp   e2
+    | And (e1, e2, _) -> cg_exp e1; p " and "; cg_exp   e2
+    | Eq (e1, e2, _) -> cg_exp e1; p " == "; cg_exp   e2
+    | Neq (e1, e2, _) -> cg_exp e1; p " != "; cg_exp   e2
+    | Gt (e1, e2, _) -> cg_exp e1; p " > "; cg_exp   e2
+    | Gteq (e1, e2, _) -> cg_exp e1; p " >= "; cg_exp   e2
+    | Lt (e1, e2, _) -> cg_exp e1; p " < "; cg_exp   e2
+    | Lteq (e1, e2, _) -> cg_exp e1; p " <= "; cg_exp   e2
+    | Plus (e1, e2, _) -> cg_exp e1; p " + "; cg_exp   e2
+    | Minus (e1, e2, _) -> cg_exp e1; p " - "; cg_exp   e2
+    | Bor (e1, e2, _) -> cg_exp e1; p " | "; cg_exp   e2
+    | Xor (e1, e2, _) -> cg_exp e1; p " ^ "; cg_exp   e2
+    | Mult (e1, e2, _) -> cg_exp e1; p " * "; cg_exp   e2
+    | Div (e1, e2, _) -> cg_exp e1; p " / "; cg_exp   e2
+    | Mod (e1, e2, _) -> cg_exp e1; p " % "; cg_exp   e2
+    | Lshft (e1, e2, _) -> cg_exp   e1; p " << "; cg_exp   e2
+    | Rshft (e1, e2, _) -> cg_exp   e1; p " >> "; cg_exp   e2
+    | Band (e1, e2, _) -> cg_exp   e1; p " & "; cg_exp   e2
+    | Nand (e1, e2, _) -> p "!"; cg_exp   e1; p " & "; cg_exp   e2
+    | Uplus (e, _) -> p " + "; cg_exp   e
+    | Uminus (e, _) -> p " - "; cg_exp   e
+    | Not (e, _) -> p " ! "; cg_exp   e (*Apparently not used I think *)
+    | Uxor (e, _) -> p " ~ "; cg_exp e
+    (*Now comes the literals *)
+    | LitInt (i, _) -> p i
+    | LitBool (b, _) -> if b == true then p "True" else p "False"
+    | LitFloat (f, _) -> p f
+    | LitString (str, _) -> p str
+    | LitRawString (str, _) -> p str
+    | LitRune (r, _) -> p "ord (" ; p r; p ")"
+    (* Now comes the misc parts  *)
+    | ParenExpression (e, _) -> p "("; cg_exp e; p ")"
+    | Append (e1, e2, _) -> p "append("; cg_exp e1; p ", "; cg_exp e2; p ")\n" 
+    | Len (e, _) -> p "len("; cg_exp e; p ")"
+    | Cap (e, _) -> p "cap("; cg_exp e; p ")"
+    (*Now comes the identifier and functions *)
+    | FunctionCall (Identifier (str, pos) as id, es, _) -> 
+        (*Make an exception if its a type, as then it we should not print the id*)
+        cg_id id; p "(";
+        let f e = (cg_exp e; p ", ") in 
+        List.iter f es;
+        p ")"
+    | IdentifierExpression ie -> () (* TODO *)
+
+
+and cg_stmt ?(il=0) stmt = 
+    match stmt with 
+    | PrintStatement (eso, _) ->  
+        p "print (";
+    | _ -> () (* TO BE CONTINUED *)
+
+     
+    
+    
