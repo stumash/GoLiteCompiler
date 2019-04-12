@@ -1,15 +1,11 @@
 package main
 
-var a int
+var a struct{
+    x, y int
+    a struct{
+        x, y int
+    }
+}
 
-type num int
-
-var b num
-
-var c float64
-
-var d rune
-
-var e string
-
-var f []int
+var b = a.x
+var c = a.a.x

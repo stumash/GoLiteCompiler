@@ -1,13 +1,13 @@
 class go_struct:
     pass
 
-def copy_before_pass(obj):
+def cpy(obj):
     if type(obj) == list:
-        copy = [copy_before_pass(x) for x in obj]
+        copy = [cpy(x) for x in obj]
     elif type(obj) == go_struct:
         copy = go_struct()
         for k,v in obj.__dict__.items():
-            setattr(copy, k, copy_before_pass(v))
+            setattr(copy, k, cpy(v))
     else:
         copy = obj
     return copy
@@ -41,7 +41,7 @@ class go_slice:
             else:
                 new_slice.capacity = int(self.capacity * 2)
             
-            new_contents = [copy_before_pass(x) for x in self.contents]
+            new_contents = [cpy(x) for x in self.contents]
         else:
             new_slice.capacity = self.capacity
             new_contents = self.contents

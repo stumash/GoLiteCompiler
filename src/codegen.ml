@@ -6,6 +6,7 @@ open Golitetypes
 
 (* append positions to variable names for overshadowing *)
 (* for every non-declared variable in current scope, use 'nonlocal' on it *)
+(* copy on EVERY RHS and ALL FUNC ARGS *)
 
 let p s = print_string s
 
@@ -16,28 +17,49 @@ let z (ln,cn) =
     let f i = if i < 0 then "_"^(string_of_int (-1 * i)) else string_of_int i in
     "_"^(f ln)^"_"^(f cn)
 
+let get_nonlocals ss scope_start =
+    let remove_dups xs =
+        let rec remove_dups' xs = (* TODO *)
+            match xs with
+            | h1::(h2::_ as t) ->
+                if h1 = h2 then remove_dups' t else
+                h1 :: remove_dups' t
+            | _ -> in
+        remove_dups' (List.sort xs) in
+    let f acc s =
+        let s_nonlocals =
+            match s with (* TODO *)
+            | _ -> [""] in
+        s_nonlocals @ acc
+    remove_dups @@ List.fold_left f [] ss
+
 let rec cg_glt_default ?(il=0) varname glt =
     match glt with
     | Void | FunctionT (_,_) -> raise (CodegenError "HOW YOU DO THIS TO ME?!")
-    | IntT                   -> p_ind il; p (varname^" = 0")
-    | FloatT                 -> p_ind il; p (varname^" = 0.0")
-    | BoolT                  -> p_ind il; p (varname^" = False")
-    | RuneT                  -> p_ind il; p (varname^" = 0")
-    | StringT                -> p_ind il; p (varname^" = \"\"")
-    | SliceT _               -> p_ind il; p (varname^" = go_slice()")
+    | IntT                   -> p_ind il; p (varname^" = 0\n")
+    | FloatT                 -> p_ind il; p (varname^" = 0.0\n")
+    | BoolT                  -> p_ind il; p (varname^" = False\n")
+    | RuneT                  -> p_ind il; p (varname^" = 0\n")
+    | StringT                -> p_ind il; p (varname^" = \"\"\n")
+    | SliceT _               -> p_ind il; p (varname^" = go_slice()\n")
     | NamedT (str, pos)      -> cg_glt_default ~il varname (rt glt)
     | ArrayT (i,glt)         ->
         p_ind il; p "def make_array_element():\n";
         cg_glt_default ~il:(il+1) "dummy_var" glt;
         p_ind (il+1); p "return dummy_var\n";
         p_ind il; p (varname^" = [make_array_element() for _ in range("^(string_of_int i)^")]\n")
-    | StructT stds           -> 
+    | StructT stds           ->
         p_ind il; p (varname^" = go_struct()\n");
         let f (f_name,glt) =
             cg_glt_default ~il (varname^"."^f_name) glt in
         List.iter f stds
 
 let current_scope = ref global_scope
+
+let dec_lookup str pos = (* get position of declaration for Identifier(str, pos) *)
+    let cat,glt,dec_pos = lookup ~current_scope str pos in
+    if dec_pos <= pos then cat,glt,dec_pos else
+    lookup ~current_scope:(ref (parent !current_scope)) str pos
 
 let rec cg_program ast =
     match ast with
@@ -70,8 +92,8 @@ and cg_decl ?(il=0) dec =
                 List.map f ids in
             let f ((Identifier (str,_) as id), ((glt,pos), eo)) =
                 (match eo with
-                | Some e -> cg_id ~il id; p " = "; cg_exp e
-                | None   -> cg_glt_default ~il str glt);
+                | Some e -> cg_id ~il id; p " = "; p "cpy("; cg_exp e; p ")"
+                | None   -> cg_glt_default ~il (str^(z pos)) glt);
                 p "\n" in
             List.iter f (List.combine ids (List.combine glts_pos eos)) in
         List.iter cg_vd vds
@@ -79,71 +101,85 @@ and cg_decl ?(il=0) dec =
 
 and cg_id ?(il=0) (Identifier (str, pos)) =
     p_ind il;
-    if str = "_" then p ("_"^(z pos)) else
-    let pos = trd3 (lookup ~current_scope str pos) in
-    p (str^(z pos))
+    if str = "_" then p (z pos) else
+    let dec_pos = trd3 (dec_lookup str pos) in
+    p (str^(z dec_pos))
 
-and cg_exp ?(il=0) e = 
-    match e with 
-    | Or (e1, e2, _) -> cg_exp e1; p " or "; cg_exp   e2
-    | And (e1, e2, _) -> cg_exp e1; p " and "; cg_exp   e2
-    | Eq (e1, e2, _) -> cg_exp e1; p " == "; cg_exp   e2
-    | Neq (e1, e2, _) -> cg_exp e1; p " != "; cg_exp   e2
-    | Gt (e1, e2, _) -> cg_exp e1; p " > "; cg_exp   e2
-    | Gteq (e1, e2, _) -> cg_exp e1; p " >= "; cg_exp   e2
-    | Lt (e1, e2, _) -> cg_exp e1; p " < "; cg_exp   e2
-    | Lteq (e1, e2, _) -> cg_exp e1; p " <= "; cg_exp   e2
-    | Plus (e1, e2, _) -> cg_exp e1; p " + "; cg_exp   e2
-    | Minus (e1, e2, _) -> cg_exp e1; p " - "; cg_exp   e2
-    | Bor (e1, e2, _) -> cg_exp e1; p " | "; cg_exp   e2
-    | Xor (e1, e2, _) -> cg_exp e1; p " ^ "; cg_exp   e2
-    | Mult (e1, e2, _) -> cg_exp e1; p " * "; cg_exp   e2
-    | Div (e1, e2, _) -> cg_exp e1; p " // "; cg_exp   e2
-    | Mod (e1, e2, _) -> cg_exp e1; p " % "; cg_exp   e2
-    | Lshft (e1, e2, _) -> cg_exp   e1; p " << "; cg_exp   e2
-    | Rshft (e1, e2, _) -> cg_exp   e1; p " >> "; cg_exp   e2
-    | Band (e1, e2, _) -> cg_exp   e1; p " & "; cg_exp   e2
-    | Nand (e1, e2, _) -> p "!"; cg_exp   e1; p " & "; cg_exp   e2
-    | Uplus (e, _) -> p " + "; cg_exp   e
-    | Uminus (e, _) -> p " - "; cg_exp   e
-    | Not (e, _) -> p " ! "; cg_exp   e (*Apparently not used I think *)
-    | Uxor (e, _) -> p " ~ "; cg_exp e
-    (*Now comes the literals *)
-    | LitInt (i, _) -> p (string_of_int i)
-    | LitBool (b, _) -> if b == true then p "True" else p "False"
-    | LitFloat (f, _) -> p (string_of_float f)
-    | LitString (str, _) -> p str
-    | LitRawString (str, _) -> p str
-    | LitRune (r, _) -> p "ord (" ; p r; p ")"
-    (* Now comes the misc parts  *)
-    | ParenExpression (e, _) -> p "("; cg_exp e; p ")"
-    | Append (e1, e2, _) -> p "append("; cg_exp e1; p ", "; cg_exp e2; p ")\n" 
-    | Len (e, _) -> p "len("; cg_exp e; p ")"
-    | Cap (e, _) -> p "cap("; cg_exp e; p ")"
-    (*Now comes the identifier and functions *)
-    | FunctionCall (Identifier (str, pos) as id, es, _) -> 
-        (*Make an exception if its a type, as then it we should not print the id*)
-        cg_id id; p "(";
-        (*Weird case *)
-        let f e = (cg_exp e; p ", ") in 
+and cg_exp ?(il=0) e =
+    match e with
+    (* binary expressions *)
+    | Or (e1, e2, _)               -> p_ind il; cg_exp e1; p " or "; cg_exp e2
+    | And (e1, e2, _)              -> p_ind il; cg_exp e1; p " and "; cg_exp e2
+    | Eq (e1, e2, _)               -> p_ind il; cg_exp e1; p " == "; cg_exp e2
+    | Neq (e1, e2, _)              -> p_ind il; cg_exp e1; p " != "; cg_exp e2
+    | Gt (e1, e2, _)               -> p_ind il; cg_exp e1; p " > "; cg_exp e2
+    | Gteq (e1, e2, _)             -> p_ind il; cg_exp e1; p " >= "; cg_exp e2
+    | Lt (e1, e2, _)               -> p_ind il; cg_exp e1; p " < "; cg_exp e2
+    | Lteq (e1, e2, _)             -> p_ind il; cg_exp e1; p " <= "; cg_exp e2
+    | Plus (e1, e2, _)             -> p_ind il; cg_exp e1; p " + "; cg_exp e2
+    | Minus (e1, e2, _)            -> p_ind il; cg_exp e1; p " - "; cg_exp e2
+    | Bor (e1, e2, _)              -> p_ind il; cg_exp e1; p " | "; cg_exp e2
+    | Xor (e1, e2, _)              -> p_ind il; cg_exp e1; p " ^ "; cg_exp e2
+    | Mult (e1, e2, _)             -> p_ind il; cg_exp e1; p " * "; cg_exp e2
+    | Div (e1, e2, _)              -> p_ind il; cg_exp e1; p " // "; cg_exp e2
+    | Mod (e1, e2, _)              -> p_ind il; cg_exp e1; p " % "; cg_exp e2
+    | Lshft (e1, e2, _)            -> p_ind il; cg_exp e1; p " << "; cg_exp e2
+    | Rshft (e1, e2, _)            -> p_ind il; cg_exp e1; p " >> "; cg_exp e2
+    | Band (e1, e2, _)             -> p_ind il; cg_exp e1; p " & "; cg_exp e2
+    | Nand (e1, e2, _)             -> p_ind il; p "~("; cg_exp e1; p " & "; cg_exp e2; p ")"
+    (* unary expressions *)
+    | Uplus (e, _)                 -> p_ind il; p " + "; cg_exp e
+    | Uminus (e, _)                -> p_ind il; p " - "; cg_exp e
+    | Not (e, _)                   -> p_ind il; p " not "; cg_exp e
+    | Uxor (e, _)                  -> p_ind il; p " ~ "; cg_exp e
+    (* misc *)
+    | LitInt (i, _)                -> p_ind il; p (string_of_int i)
+    | LitBool (b, _)               -> p_ind il; if b == true then p "True" else p "False"
+    | LitFloat (f, _)              -> p_ind il; p (string_of_float f)
+    | LitString (str, _)           -> p_ind il; p str
+    | LitRawString (str, _)        -> p_ind il; p str
+    | LitRune (r, _)               -> p_ind il; p "ord ("; p r; p ")"
+    | ParenExpression (e, _)       -> p_ind il; p "("; cg_exp e; p ")"
+    | IdentifierExpression ie ->
+        (match ie with
+        | Ident (str, pos)           -> cg_id (Identifier (str, pos))
+        | Indexed (e1, e2, pos)      -> cg_exp e1; p "["; cg_exp e2; p "]"
+        | StructAccess (e, str, pos) -> cg_exp e; p ("."^str))
+    (* function calls *)
+    | Append (e1, e2, _)           -> p_ind il; p "append("; cg_exp e1; p ", "; cg_exp e2; p ")\n"
+    | Len (e, _)                   -> p_ind il; p "len("; cg_exp e; p ")"
+    | Cap (e, _)                   -> p_ind il; p "cap("; cg_exp e; p ")"
+    | FunctionCall (Identifier (str, pos) as id, es, _) ->
+        let cat,glt,dec_pos = dec_lookup str pos in
+        p_ind il;
+        (if cat = Type then (* type cast *)
+            (match rt glt with
+            | IntT    -> p "int"
+            | FloatT  -> p "float"
+            | RuneT   -> p "int"
+            | StringT -> p "str"
+            | _       -> ())
+        else
+            cg_id id);
+        p "(";
+        let f e = (p "cpy("; cg_exp e; p "), ") in
         List.iter f es;
         p ")"
-    | IdentifierExpression ie -> () (* TODO *)
 
-and cg_stmt ?(il=0) stmt = 
-    match stmt with 
-    | PrintStatement (eso, _) ->  
-        p_ind il; p "print ("; 
-        (match eso with 
-        | Some eso -> 
+and cg_stmt ?(il=0) stmt =
+    match stmt with
+    | PrintStatement (eso, _) ->
+        p_ind il; p "print(";
+        (match eso with
+        | Some eso ->
             let f e = cg_exp e; p ", " in
             List.iter f eso
         | None -> ());
-        p " end = '' )\n"
-    | PrintlnStatement (eso, _) -> 
-        p "print ("; 
-        (match eso with 
-        | Some eso -> 
+        p " end='')\n"
+    | PrintlnStatement (eso, _) ->
+        p "print (";
+        (match eso with
+        | Some eso ->
             let f e = cg_exp e; p ", " in
             List.iter f eso
         | None -> ());
@@ -154,19 +190,16 @@ and cg_stmt ?(il=0) stmt =
     | Continue _ -> p "continue\n"
     | ReturnStatement (eso, _) ->
         p "return ";
-        (match eso with 
-        | Some es -> cg_exp es 
-        | None -> () );
+        (match eso with
+        | Some es -> cg_exp es
+        | None -> ());
         p "\n"
     | ExpressionStatement (e, _) -> cg_exp e; p "\n"
-    | DeclarationStatement dec -> cg_decl dec (*Maybe print endline ?? *) 
-    | AssignmentStatement (es1, ao, es2) -> () (*Symbol table issues ?? *)
-    | ShortValDeclaration (ids, es) -> () (* SYmbol table issues ?? *)
-    | IfStatement ifstmt -> () (*TODO *) 
+    | DeclarationStatement dec -> cg_decl dec
+    | AssignmentStatement (es1, ao, es2) -> ()
+    | ShortValDeclaration (ids, es) -> ()
+    | IfStatement ifstmt -> () (*TODO *)
     | ForStatement (s1, eso, s2, ss, _) -> () (*TODO*)
     | SwitchStatement (s, eso, swcl, _) -> () (*TODO*)
-    | _ -> () (* Should be impossible  *)
-
-     
-    
-    
+    | BlockStatements (ss, pos) -> ()
+    | EmptyStatement -> ()
