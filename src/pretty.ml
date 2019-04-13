@@ -77,25 +77,25 @@ and pp_prm (ids, tp) =
 and pp_stmt ?(il=0) ?(nl=true) stmt =
     match stmt with
     (* simple statements *)
-    | ExpressionStatement (e,_)           -> p_ind il; pp_exp e; ifp nl "\n"
-    | AssignmentStatement (es1, aop, es2) -> p_ind il; pp_exps es1; pp_aop aop; pp_exps es2; ifp nl "\n"
-    | ShortValDeclaration (ids, es)       -> p_ind il; pp_ids ids; p " := "; pp_exps es; ifp nl "\n"
-    | Inc e                               -> p_ind il; pp_exp e; p "++"; ifp nl "\n"
-    | Dec e                               -> p_ind il; pp_exp e; p "--"; ifp nl "\n"
-    | EmptyStatement                      -> ifp nl "\n"
+    | ExpressionStatement (e,_)             -> p_ind il; pp_exp e; ifp nl "\n"
+    | AssignmentStatement (es1, aop, es2)   -> p_ind il; pp_exps es1; pp_aop aop; pp_exps es2; ifp nl "\n"
+    | ShortValDeclaration (ids, es)         -> p_ind il; pp_ids ids; p " := "; pp_exps es; ifp nl "\n"
+    | Inc e                                 -> p_ind il; pp_exp e; p "++"; ifp nl "\n"
+    | Dec e                                 -> p_ind il; pp_exp e; p "--"; ifp nl "\n"
+    | EmptyStatement                        -> ifp nl "\n"
     (* all other statements *)
-    | DeclarationStatement decl           -> pp_decl ~il decl
-    | PrintStatement (Some es,_)          -> p_ind il; p "print("; pp_exps es; p ")\n"
-    | PrintlnStatement (Some es,_)        -> p_ind il; p "println("; pp_exps es; p ")\n"
-    | PrintStatement (None,_)             -> p_ind il; p "print ()\n"
-    | PrintlnStatement (None,_)           -> p_ind il; p "println ()\n"
-    | ReturnStatement (eo,_)              -> p_ind il; p "return "; ifsome eo pp_exp; p "\n"
-    | IfStatement ifs                     -> pp_ifs ifs
-    | SwitchStatement (so, eo, scl, _)    -> pp_sw (so, eo, scl)
-    | ForStatement (so1, eo, so2, ss, _)  -> pp_for (so1, eo, so2, ss)
-    | Break _                             -> p_ind il; p "break\n"
-    | Continue _                          -> p_ind il; p "continue\n"
-    | BlockStatements (ss,_)              -> p_ind il; p "{\n"; List.iter (pp_stmt ~il:(il+1)) ss; p_ind il; p "}\n"
+    | DeclarationStatement decl             -> pp_decl ~il decl
+    | PrintStatement (Some es,_)            -> p_ind il; p "print("; pp_exps es; p ")\n"
+    | PrintlnStatement (Some es,_)          -> p_ind il; p "println("; pp_exps es; p ")\n"
+    | PrintStatement (None,_)               -> p_ind il; p "print ()\n"
+    | PrintlnStatement (None,_)             -> p_ind il; p "println ()\n"
+    | ReturnStatement (eo,_)                -> p_ind il; p "return "; ifsome eo pp_exp; p "\n"
+    | IfStatement ifs                       -> pp_ifs ifs
+    | SwitchStatement (so, eo, scl, _)      -> pp_sw (so, eo, scl)
+    | ForStatement (so1, eo, so2, ss, _, _) -> pp_for (so1, eo, so2, ss)
+    | Break _                               -> p_ind il; p "break\n"
+    | Continue _                            -> p_ind il; p "continue\n"
+    | BlockStatements (ss,_)                -> p_ind il; p "{\n"; List.iter (pp_stmt ~il:(il+1)) ss; p_ind il; p "}\n"
 
 (* assignment operator *)
 and pp_aop aop =

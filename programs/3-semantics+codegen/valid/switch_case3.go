@@ -7,7 +7,7 @@ func main() {
     case n == 8:
         println("yes")
     case n == 6:
-        println("no")
+        println("no") //~no
     default:
         println("default")
     }

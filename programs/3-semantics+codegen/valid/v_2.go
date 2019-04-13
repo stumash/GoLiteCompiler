@@ -1,37 +1,38 @@
-//To check all types 
-package main 
+//To check all types
+package main
 
 func main () {
-	var a int ;
-	
-	type num int 
-	var b num
+    var a int
 
-	var d []int 
-	var e [100]int 
+    type num int
+    var q int
+    var b num
 
-	e[99] = 100;
-	d = append(d, 1)
+    var d []int
+    var e [100]int
 
-	type sample  struct  {
-		a, b int ;
-		x, y rune;
-	}
+    e[99] = 100;
+    d = append(d, 1)
 
-	var x1 sample
-	var x2 sample 
+    type sample  struct  {
+        a, b int ;
+        x, y rune;
+    }
 
-	x1 = x2;
+    var x1 sample
+    var x2 sample
 
-	var f struct {a, b int;}
-	var g struct {a, b int ;}
+    x1 = x2;
 
-	f = g;
+    var f struct {a, b int;}
+    var g struct {a, b int ;}
 
-	var h struct {_, b int ;}
-	var i struct {_, b int ;}
+    f = g;
 
-	h = i;
+    var h struct {_, b int ;}
+    var i struct {_, b int ;}
+
+    h = i;
 
 
 }

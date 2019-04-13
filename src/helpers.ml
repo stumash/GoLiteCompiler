@@ -25,7 +25,8 @@ exception CodegenError of string
 
 let z (lineno,colno) = " at L" ^ (string_of_int lineno) ^ ",C" ^ (string_of_int colno)
 
-let handle_error ?(default="Default") lb = function
+let handle_error ?(default="Default") lb err =
+    match err with
     | CodegenError str                -> print_error lb @@ "Codegen: " ^ str
     | TypeCheckError (str, pos)       -> print_error lb @@ "TypeChecker: " ^ str ^ (z pos)
     | TypeCheckParserError (str, pos) -> print_error lb @@ "TypeChecker: ParserError: " ^ str ^ (z pos)

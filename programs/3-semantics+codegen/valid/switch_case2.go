@@ -6,9 +6,9 @@ func main() {
     switch n++; {
     case n == 8:
         println("yes")
-    case n == 6:
+    case n == 7:
         println("no")
     default:
-        println("default")
+        println("default") //~default
     }
 }

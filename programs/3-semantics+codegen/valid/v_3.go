@@ -21,17 +21,16 @@ func main () {
 
 	var x2 [10]int;
 	x2[5] = 10;
-	println(x2[5]);
+	println(x2[5]); //~10
 	fa(x2);
-	println(x2[5]);
+	println(x2[5]); //~10
 
 	var x3 []int;
 	x3 = append(x3, 1);
 	x3 = append(x3, 2);
 	x3 = append(x3, 3);
-	println(x3[2]);
+	println(x3[2]); //~3
+
 	fsl(x3);
-
-	println(x3[2]);
-
+	println(x3[2]); //~100004
 }

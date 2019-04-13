@@ -22,7 +22,7 @@
     (* raise err if l1 and l2 differ in length *)
     let err_if_neq_len l1 l2 err =
         err_if ((List.length l1) != (List.length l2)) err
-  
+
     let is_simple_stmt stmt =
         match stmt with
         | ExpressionStatement (e,pos) ->
@@ -187,10 +187,10 @@ var_specs :
     | vd=var_spec SEMICOLON vds=var_specs { vd::vds }
     ;
 var_spec :
-    | ids=identifier_list tso=option(type_spec) eso=option(var_spec_rhs)   
+    | ids=identifier_list tso=option(type_spec) eso=option(var_spec_rhs)
       {
           err_ifboth_None tso eso VarDecNeedsTypeOrInit;
-          (match eso with 
+          (match eso with
             | None -> ()
             | Some eso -> err_if_neq_len ids eso VarDecIdsLenNeqExpsLen);
           (ids, tso, eso)
@@ -265,30 +265,30 @@ print_statement :
 
 (*For statements *)
 for_loop :
-    | pos=FOR fl=loop_type { let s1,eo,s2,ss=fl in ForStatement (s1, eo, s2, ss, pos) }
+    | pos=FOR fl=loop_type { let s1,eo,s2,ss,pos2=fl in ForStatement (s1, eo, s2, ss, pos, pos2) }
     ;
 
 (*The last tyep of loop we will need to decide as the first thign is an assigment statment and the last is also worth discussion *)
 loop_type :
-    | s1=statement_ SEMICOLON eo=option(exp) SEMICOLON s2=statement_ LCURLY ss=statements RCURLY
+    | s1=statement_ SEMICOLON eo=option(exp) pos=SEMICOLON s2=statement_ LCURLY ss=statements RCURLY
       {
           err_if ((not (is_simple_stmt s1)) || (not (is_simple_stmt s2))) NotSimpleStatement;
-          (s1, eo, s2, ss)
+          (s1, eo, s2, ss, pos)
       }
-    | LCURLY ss=statements RCURLY
+    | pos=LCURLY ss=statements RCURLY
       {
-          (EmptyStatement, None, EmptyStatement, ss)
+          (EmptyStatement, None, EmptyStatement, ss, pos)
       }
-    | e=exp LCURLY ss=statements RCURLY
+    | e=exp pos=LCURLY ss=statements RCURLY
       {
-          (EmptyStatement, Some e, EmptyStatement, ss)
+          (EmptyStatement, Some e, EmptyStatement, ss, pos)
       }
     ;
 
 (* statements *)
 statements :
     | s=statement SEMICOLON ss=statements { s::ss }
-    |                                     { [] } 
+    |                                     { [] }
     ;
 
 
@@ -450,7 +450,7 @@ exp :
     ;
 (* 'keyword functions' *)
 exp_other :
-    | e_pos=funccall                               { let e,pos=e_pos in e } 
+    | e_pos=funccall                               { let e,pos=e_pos in e }
     | pos=APPEND LPAREN e1=exp COMMA e2=exp RPAREN { Append (e1, e2, pos) } (* Append *)
     | pos=LEN LPAREN e=exp RPAREN                  { Len (e, pos) } (* array/slice length *)
     | pos=CAP LPAREN e=exp RPAREN                  { Cap (e, pos) } (* array/slice capacity *)
@@ -460,7 +460,7 @@ exp_other :
 
 funccall :
     | s_pos=IDENT LPAREN es=separated_list(COMMA, exp) RPAREN             { let s,pos=s_pos in (FunctionCall (Identifier (s,pos), es, pos)), pos }
-    | pos=LPAREN e=exp RPAREN LPAREN es=separated_list(COMMA, exp) RPAREN { (FunctionCall ((e_to_id e), es, pos)), pos } 
+    | pos=LPAREN e=exp RPAREN LPAREN es=separated_list(COMMA, exp) RPAREN { (FunctionCall ((e_to_id e), es, pos)), pos }
     ;
 
 (* identifiers and rvalues *)

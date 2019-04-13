@@ -16,9 +16,9 @@ let enter_first_child_scope () =
     current_scope := List.hd (List.rev !(children !current_scope))
 
 let enter_parent_and_delete_first_child_scope () =
-    let cs_node_remove = !current_scope in 
+    let cs_node_remove = !current_scope in
     current_scope := parent !current_scope;
-    let f node = node != cs_node_remove in 
+    let f node = node != cs_node_remove in
     (children !current_scope) := List.filter f !(children !current_scope)
 
 let p s = print_string s
@@ -30,17 +30,18 @@ let z (ln,cn) =
     let f i = if i < 0 then "_"^(string_of_int (-1 * i)) else string_of_int i in
     "_"^(f ln)^"_"^(f cn)
 
-let get_str_from_idexp idexp = 
-    let rec get_str_from_idexp' idexp = 
+let get_str_from_idexp idexp =
+    let rec get_str_from_idexp' idexp =
         (match idexp with
-        | Ident (str, pos) -> str, pos 
+        | Ident (str, pos) -> str, pos
         | Indexed (IdentifierExpression e, _, _) -> get_str_from_idexp'  e
-        | StructAccess (IdentifierExpression e, _, _) -> get_str_from_idexp' e 
+        | StructAccess (IdentifierExpression e, _, _) -> get_str_from_idexp' e
         | _ -> raise (CodegenError "WHY YOU DO THIS TO ME ? ")) in
-    get_str_from_idexp' idexp 
+    get_str_from_idexp' idexp
 
 let dec_lookup str pos = (* get position of declaration for Identifier(str, pos) *)
     let cat,glt,dec_pos = lookup ~current_scope str pos in
+    (* TODO: remove this: print_endline (z dec_pos);*)
     if dec_pos <= pos then cat,glt,dec_pos else
     lookup ~current_scope:(ref (parent !current_scope)) str pos
 
@@ -48,19 +49,19 @@ let get_and_print_nonlocals ?(il=0) ss scope_start =
     let non_local_strs =
         let f acc s =
             let s_nonlocals =
-                match s with 
-                | AssignmentStatement (es1, ao, es2) -> 
-                    let f acc e = 
-                        (match e with 
-                        | IdentifierExpression idexp -> 
-                            let str, pos = get_str_from_idexp idexp in 
-                            let dec_pos = trd3 (dec_lookup str pos) in 
+                match s with
+                | AssignmentStatement (es1, ao, es2) ->
+                    let f acc e =
+                        (match e with
+                        | IdentifierExpression idexp ->
+                            let str, pos = get_str_from_idexp idexp in
+                            let dec_pos = trd3 (dec_lookup str pos) in
                             if dec_pos < scope_start then (str^(z dec_pos)) :: acc else acc
-                        | _ -> acc) in  
+                        | _ -> acc) in
                     List.fold_left f [] es1
                 | Inc (IdentifierExpression idexp) | Dec (IdentifierExpression idexp) ->
                     let str, pos = get_str_from_idexp idexp in
-                    let dec_pos = trd3 (dec_lookup str pos) in 
+                    let dec_pos = trd3 (dec_lookup str pos) in
                     if dec_pos < scope_start then [str^(z dec_pos)] else []
                 | _ -> [] in
             s_nonlocals :: acc in
@@ -71,18 +72,18 @@ let get_and_print_nonlocals ?(il=0) ss scope_start =
 let rec cg_glt_default ?(il=0) varname glt =
     match glt with
     | Void | FunctionT (_,_) -> raise (CodegenError "WHY YOU DO THIS TO ME?!")
-    | IntT                   -> p_ind il; p (varname^" = 0")
-    | FloatT                 -> p_ind il; p (varname^" = 0.0")
-    | BoolT                  -> p_ind il; p (varname^" = False")
-    | RuneT                  -> p_ind il; p (varname^" = 0")
-    | StringT                -> p_ind il; p (varname^" = \"\"")
-    | SliceT _               -> p_ind il; p (varname^" = go_slice()")
-    | NamedT (str, pos)      -> cg_glt_default ~il varname (rt glt)
+    | IntT                   -> p_ind il; p (varname^" = 0\n")
+    | FloatT                 -> p_ind il; p (varname^" = 0.0\n")
+    | BoolT                  -> p_ind il; p (varname^" = False\n")
+    | RuneT                  -> p_ind il; p (varname^" = 0\n")
+    | StringT                -> p_ind il; p (varname^" = \"\"\n")
+    | SliceT _               -> p_ind il; p (varname^" = go_slice()\n")
+    | NamedT (str, pos)      -> cg_glt_default ~il varname (rt ~current_scope glt)
     | ArrayT (i,glt)         ->
         p_ind il; p "def make_array_element():\n";
         cg_glt_default ~il:(il+1) "dummy_var" glt;
         p_ind (il+1); p "return dummy_var\n";
-        p_ind il; p (varname^" = [make_array_element() for _ in range("^(string_of_int i)^")]")
+        p_ind il; p (varname^" = [make_array_element() for _ in range("^(string_of_int i)^")]\n")
     | StructT stds           ->
         p_ind il; p (varname^" = go_struct()\n");
         let f (f_name,glt) =
@@ -109,7 +110,7 @@ let rec cg_program ast =
 
 and cg_decl ?(il=0) dec =
     match dec with
-    | FunctionDeclaration (Identifier (str, pos1) as id, para, tso, ss, pos2) -> 
+    | FunctionDeclaration (Identifier (str, pos1) as id, para, tso, ss, pos2) ->
         if str = "main" then main_function_exists := true else ();
 
         p "\n"; p_ind il;
@@ -117,15 +118,15 @@ and cg_decl ?(il=0) dec =
 
         enter_first_child_scope ();
 
-        (match para with 
-        | Parameters prms -> 
-            (let f1 (paras, tp) = 
+        (match para with
+        | Parameters prms ->
+            (let f1 (paras, tp) =
                 (let f2 id   =
-                    cg_id id; p "," in 
-                List.iter f2 paras) in 
-            List.iter f1 prms));    
+                    cg_id id; p "," in
+                List.iter f2 paras) in
+            List.iter f1 prms));
         p "):\n";
-       
+
         get_and_print_nonlocals ~il:(il+1) ss pos2;
 
         List.iter (cg_stmt ~il:(il+1)) ss;
@@ -142,7 +143,8 @@ and cg_decl ?(il=0) dec =
                 | None    -> List.init (List.length ids) (fun i -> None)) in
             let glts_pos =
                 let f (Identifier (str, pos)) =
-                    let (_, glt, pos) = lookup ~current_scope str pos in
+                    if str = "_" then NamedT("int",(-1,-1)),pos else
+                    let (_, glt, pos) = dec_lookup  str pos in
                     glt,pos in
                 List.map f ids in
             let f ((Identifier (str,_) as id), ((glt,pos), eo)) =
@@ -156,7 +158,7 @@ and cg_decl ?(il=0) dec =
 
 and cg_id ?(il=0) (Identifier (str, pos)) =
     p_ind il;
-    if str = "_" then p (z pos) else
+    if str = "_" then p (str^(z pos)) else
     let dec_pos = trd3 (dec_lookup str pos) in
     p (str^(z dec_pos))
 
@@ -201,7 +203,7 @@ and cg_exp ?(il=0) e =
         | Indexed (e1, e2, pos)      -> cg_exp e1; p "["; cg_exp e2; p "]"
         | StructAccess (e, str, pos) -> cg_exp e; p ("."^str))
     (* function calls *)
-    | Append (e1, e2, _)           -> p_ind il; p "append("; cg_exp e1; p ", "; cg_exp e2; p ")\n"
+    | Append (e1, e2, _)           -> p_ind il; p "append("; cg_exp e1; p ", "; cg_exp e2; p ")"
     | Len (e, _)                   -> p_ind il; p "len("; cg_exp e; p ")"
     | Cap (e, _)                   -> p_ind il; p "cap("; cg_exp e; p ")"
     | FunctionCall (Identifier (str, pos) as id, es, _) ->
@@ -251,50 +253,118 @@ and cg_stmt ?(il=0) stmt =
         p "\n"
     | ExpressionStatement (e, _) -> cg_exp ~il e; p "\n"
     | DeclarationStatement dec -> cg_decl ~il dec
-    | AssignmentStatement (es1, ao, es2) -> 
+    | AssignmentStatement (es1, ao, es2) ->
         p_ind il;
-        let f1 e = cg_exp e; p ", " in 
+        let f1 e = cg_exp e; p ", " in
         let f2 e = cg_exp e in
-        (match ao with 
-        | ASG     -> List.iter f1 es1; p "= " ; List.iter f1 es2;              
+        (match ao with
+        | ASG     -> List.iter f1 es1; p "= " ; List.iter f1 es2;
         (* es length = 1 *)
-        | PLUSEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " + "  ; List.iter f2 es2       
-        | MINUSEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " - "  ; List.iter f2 es2     
-        | MULTEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " * "  ; List.iter f2 es2     
-        | DIVEQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " // " ; List.iter f2 es2       
-        | MODEQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " % "  ; List.iter f2 es2     
-        | BANDEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " & "  ; List.iter f2 es2     
-        | BOREQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " | "  ; List.iter f2 es2     
-        | XOREQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " ^ "  ; List.iter f2 es2     
-        | LSHFTEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " << " ; List.iter f2 es2       
-        | RSHFTEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " >> " ; List.iter f2 es2       
+        | PLUSEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " + "  ; List.iter f2 es2
+        | MINUSEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " - "  ; List.iter f2 es2
+        | MULTEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " * "  ; List.iter f2 es2
+        | DIVEQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " // " ; List.iter f2 es2
+        | MODEQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " % "  ; List.iter f2 es2
+        | BANDEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " & "  ; List.iter f2 es2
+        | BOREQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " | "  ; List.iter f2 es2
+        | XOREQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " ^ "  ; List.iter f2 es2
+        | LSHFTEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " << " ; List.iter f2 es2
+        | RSHFTEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " >> " ; List.iter f2 es2
         | NANDEQ  -> List.iter f2 es1; p " = " ; p "~("; List.iter f2 es1; p " & " ; List.iter f2 es2; p ")" );
-        p "\n"; 
-    | ShortValDeclaration (ids, es) -> 
+        p "\n";
+    | ShortValDeclaration (ids, es) ->
         p_ind il;
-        let f id = cg_id id; p ", " in 
-        List.iter f ids; p " = "; 
-        let f e = cg_exp e; p ", " in 
+        let f id = cg_id id; p ", " in
+        List.iter f ids; p " = ";
+        let f e = cg_exp e; p ", " in
         List.iter f es; p "\n"
     | IfStatement ifstmt -> cg_ifstmt ~il ifstmt
-    | ForStatement (s1, eso, s2, ss, _) -> ()
-        (*p_ind il; p "def for_statement():\n"*)
-    | SwitchStatement (s, eso, swcl, _) -> () (* TODO *)
+    | ForStatement (s1, eo, s2, ss, pos, pos2) ->
+        p_ind il; p "def for_statement():\n";
+
+        enter_first_child_scope ();
+        get_and_print_nonlocals ~il:(il+1) [s1] pos;
+
+        cg_stmt ~il:(il+1) s1;
+
+        p_ind (il+1); p "def _for():\n";
+
+        enter_first_child_scope ();
+        get_and_print_nonlocals ~il:(il+2) (ss@[s2]) (pos2);
+
+        p_ind (il+2); p "while ";
+        (match eo with
+        | None -> p "True"
+        | Some e -> cg_exp e);
+        p ":\n";
+
+        List.iter (cg_stmt ~il:(il+3)) (ss@[s2]);
+
+        enter_parent_and_delete_first_child_scope ();
+        p_ind (il+1); p "_for()\n";
+
+        enter_parent_and_delete_first_child_scope ();
+        p_ind il; p "for_statement()\n"
+
+    | SwitchStatement (s, eo, swcs, pos) ->
+        p_ind il; p "def switch_statement():\n";
+
+        enter_first_child_scope ();
+        get_and_print_nonlocals ~il:(il+1) [s] pos;
+        cg_stmt ~il:(il+1) s;
+
+        p_ind (il+1); p "se = ";
+        (match eo with
+        | Some e -> cg_exp e
+        | None -> p "True");
+        p "\n";
+
+        p_ind (il+1); p "if False: pass\n";
+
+        let cg_swc do_case_not_def swc =
+            let o =
+                (match swc with
+                | Case (es, ss, pos) ->
+                    if not do_case_not_def then None
+                    else Some (es,ss,pos)
+                | Default (ss, pos) ->
+                    if do_case_not_def then None
+                    else Some ([LitBool (true,(-1,-1))], ss, pos)) in
+            (match o with
+            | None -> ()
+            | Some (es, ss, pos) ->
+                enter_first_child_scope ();
+
+                p_ind (il+1); p "elif se == any([";
+                List.iter (fun e -> cg_exp e; p ", ") es;
+                p "]):\n";
+                
+                p_ind (il+2); p "def switch_case():\n";
+                get_and_print_nonlocals ~il:(il+3) ss pos;
+                List.iter (cg_stmt ~il:(il+3)) ss;
+
+                enter_parent_and_delete_first_child_scope ();
+                p_ind (il+2); p "switch_case()\n") in
+        List.iter (cg_swc true) swcs;
+        List.iter (cg_swc false) swcs;
+
+        enter_parent_and_delete_first_child_scope ();
+        p_ind il; p "switch_statement()\n"
+
     | BlockStatements (ss, pos) ->
         p "\n"; p_ind il; p "def block_statements():\n";
 
         enter_first_child_scope ();
-        
         get_and_print_nonlocals ~il:(il+1) ss pos;
 
         List.iter (cg_stmt ~il:(il + 1)) ss;
 
-        p_ind il; p "block_statements()\n";
+        enter_parent_and_delete_first_child_scope ();
+        p_ind il; p "block_statements()\n"
 
-        enter_parent_and_delete_first_child_scope ()
     | EmptyStatement -> p "\n"
-  
-and cg_ifstmt ?(il=0) (If (s, e, ss, elso, pos)) = 
+
+and cg_ifstmt ?(il=0) (If (s, e, ss, elso, pos)) =
     p_ind il; p "def if_statement():\n";
     enter_first_child_scope ();
     get_and_print_nonlocals ~il:(il+1) [s] pos;
@@ -304,7 +374,7 @@ and cg_ifstmt ?(il=0) (If (s, e, ss, elso, pos)) =
 
     p_ind (il + 2); p "def _if():\n";
     enter_first_child_scope ();
-    get_and_print_nonlocals ~il:(il+3) ss (let ln,cn = pos in ln,cn+1000);
+    get_and_print_nonlocals ~il:(il+3) ss (get_pos_e e);
 
     List.iter (cg_stmt ~il:(il + 3)) ss;
 
@@ -312,7 +382,7 @@ and cg_ifstmt ?(il=0) (If (s, e, ss, elso, pos)) =
     p_ind (il + 2); p "_if()\n";
 
     (match elso with
-    | Some els ->  
+    | Some els ->
         p_ind (il + 1); p "else:\n";
         (match els with
         | Elseif (ifstmt,_) -> cg_ifstmt ~il:(il+2) ifstmt
@@ -327,6 +397,6 @@ and cg_ifstmt ?(il=0) (If (s, e, ss, elso, pos)) =
             p_ind (il + 2); p "else_statement()\n";
         )
     | None -> ());
-      
+
     enter_parent_and_delete_first_child_scope ();
     p_ind il; p "if_statement()\n\n"

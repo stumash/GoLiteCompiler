@@ -33,7 +33,7 @@ and wd_stmt stmt =
             | _ -> ()) in
         List.iter f ss;
         EmptyStatement
-    | ForStatement (s1, eo, s2, ss, pos) -> List.iter (fun s -> wd_stmt s; ()) ss; EmptyStatement
+    | ForStatement (s1, eo, s2, ss, pos, _) -> List.iter (fun s -> wd_stmt s; ()) ss; EmptyStatement
     | SwitchStatement (s, eo, scl, pos) -> List.iter (fun sw -> wd_sc sw; ()) scl; EmptyStatement
     | IfStatement ifs ->
         (match ifs with 

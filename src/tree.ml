@@ -36,7 +36,7 @@ and statement =
   | ReturnStatement of expression option * (int * int)
   | IfStatement of if_statement
   | SwitchStatement of statement * (expression option) * (switch_clause list) * (int * int)
-  | ForStatement of statement * (expression option) * statement * (statement list) * (int * int)
+  | ForStatement of statement * (expression option) * statement * (statement list) * (int * int) * (int * int)
   | BlockStatements of (statement list) * (int * int)
   | Break of (int * int)
   | Continue of (int * int)
