@@ -12,7 +12,7 @@ open Golitetypes
 let current_scope = ref global_scope
 
 let enter_first_child_scope () =
-    current_scope := List.hd (List.rev !(children !current_scope));
+    current_scope := List.hd (List.rev !(children !current_scope))
 
 let enter_parent_and_delete_first_child_scope () =
     let cs_node_remove = !current_scope in 
@@ -65,7 +65,7 @@ let get_and_print_nonlocals ?(il=0) ss scope_start =
             s_nonlocals :: acc in
         remove_dups @@ List.flatten @@ List.fold_left f [] ss in
     let f str = p_ind il; p ("nonlocal "^str^"\n") in
-    List.iter f non_loc_strs
+    List.iter f non_local_strs
 
 let rec cg_glt_default ?(il=0) varname glt =
     match glt with
@@ -119,7 +119,7 @@ and cg_decl ?(il=0) dec =
             List.iter f1 prms));    
         p "):\n";
        
-        get_and_print_nonlocals ~il(il+1) ss pos;
+        get_and_print_nonlocals ~il:(il+1) ss pos;
 
         List.iter (cg_stmt ~il:(il+1)) ss;
 
@@ -272,7 +272,7 @@ and cg_stmt ?(il=0) stmt =
 
         enter_first_child_scope ();
         
-        get_and_print_nonlocals ~il(il+1) ss pos;
+        get_and_print_nonlocals ~il:(il+1) ss pos;
 
         List.iter (cg_stmt ~il:(il + 1)) ss;
 
