@@ -8,6 +8,7 @@ open Golitetypes
 (* for every non-declared variable in current scope, use 'nonlocal' on it *)
 (* copy on EVERY RHS and ALL FUNC ARGS *)
 
+let main_function_exists = ref false
 
 let current_scope = ref global_scope
 
@@ -63,25 +64,25 @@ let get_and_print_nonlocals ?(il=0) ss scope_start =
                     if dec_pos < scope_start then [str^(z dec_pos)] else []
                 | _ -> [] in
             s_nonlocals :: acc in
-        remove_dups @@ List.flatten @@ List.fold_left f [] ss in
-    let f str = p_ind il; p ("nonlocal "^str^"\n") in
+        remove_dups (List.flatten (List.fold_left f [] ss)) in
+    let f str = (p_ind il; p ("nonlocal "^str^"\n")) in
     List.iter f non_local_strs
 
 let rec cg_glt_default ?(il=0) varname glt =
     match glt with
     | Void | FunctionT (_,_) -> raise (CodegenError "WHY YOU DO THIS TO ME?!")
-    | IntT                   -> p_ind il; p (varname^" = 0\n")
-    | FloatT                 -> p_ind il; p (varname^" = 0.0\n")
-    | BoolT                  -> p_ind il; p (varname^" = False\n")
-    | RuneT                  -> p_ind il; p (varname^" = 0\n")
-    | StringT                -> p_ind il; p (varname^" = \"\"\n")
-    | SliceT _               -> p_ind il; p (varname^" = go_slice()\n")
+    | IntT                   -> p_ind il; p (varname^" = 0")
+    | FloatT                 -> p_ind il; p (varname^" = 0.0")
+    | BoolT                  -> p_ind il; p (varname^" = False")
+    | RuneT                  -> p_ind il; p (varname^" = 0")
+    | StringT                -> p_ind il; p (varname^" = \"\"")
+    | SliceT _               -> p_ind il; p (varname^" = go_slice()")
     | NamedT (str, pos)      -> cg_glt_default ~il varname (rt glt)
     | ArrayT (i,glt)         ->
         p_ind il; p "def make_array_element():\n";
         cg_glt_default ~il:(il+1) "dummy_var" glt;
         p_ind (il+1); p "return dummy_var\n";
-        p_ind il; p (varname^" = [make_array_element() for _ in range("^(string_of_int i)^")]\n")
+        p_ind il; p (varname^" = [make_array_element() for _ in range("^(string_of_int i)^")]")
     | StructT stds           ->
         p_ind il; p (varname^" = go_struct()\n");
         let f (f_name,glt) =
@@ -99,14 +100,20 @@ let rec cg_program ast =
         p "def main():\n";
         (if (List.length ds) = 0 then p "    pass" else ());
         List.iter (cg_decl ~il:1) ds;
+        if not !main_function_exists then ()
+        else
+            (let pos = trd3 (lookup ~current_scope "main" (-1,-1)) in
+            p_ind 1; p ("main"^(z pos)^"()\n"));
         p "main()\n\n"
     | EmptyProgram -> ()
 
 and cg_decl ?(il=0) dec =
     match dec with
-    | FunctionDeclaration (Identifier (str, _) as id, para, tso, ss, pos) -> 
-        p_ind il;
-        p "def "; p (str^z(pos)); p "(";
+    | FunctionDeclaration (Identifier (str, pos1) as id, para, tso, ss, pos2) -> 
+        if str = "main" then main_function_exists := true else ();
+
+        p "\n"; p_ind il;
+        p "def "; p (str^z(pos1)); p "(";
 
         enter_first_child_scope ();
 
@@ -119,9 +126,12 @@ and cg_decl ?(il=0) dec =
             List.iter f1 prms));    
         p "):\n";
        
-        get_and_print_nonlocals ~il:(il+1) ss pos;
+        get_and_print_nonlocals ~il:(il+1) ss pos2;
 
         List.iter (cg_stmt ~il:(il+1)) ss;
+        if (List.length ss) = 0 then (p_ind (il+1); p "pass\n") else ();
+        if str = "init" then (p_ind il; p ("init"^(z pos1)^"()\n")) else ();
+        p "\n";
 
         enter_parent_and_delete_first_child_scope ()
     | VariableDeclaration (vds, pos) ->
@@ -239,24 +249,26 @@ and cg_stmt ?(il=0) stmt =
         | Some es -> cg_exp es
         | None -> ());
         p "\n"
-    | ExpressionStatement (e, _) -> cg_exp e; p "\n"
-    | DeclarationStatement dec -> cg_decl dec
+    | ExpressionStatement (e, _) -> cg_exp ~il e; p "\n"
+    | DeclarationStatement dec -> cg_decl ~il dec
     | AssignmentStatement (es1, ao, es2) -> 
         p_ind il;
-        let f e = cg_exp e; p ", " in 
+        let f1 e = cg_exp e; p ", " in 
+        let f2 e = cg_exp e in
         (match ao with 
-        | ASG     -> List.iter f es1; p "=" ; List.iter f es2;              
-        | PLUSEQ  -> List.iter f es1; p "=" ; List.iter f es1; p " + "  ; List.iter f es2       
-        | MINUSEQ -> List.iter f es1; p "=" ; List.iter f es1; p " - "  ; List.iter f es2     
-        | MULTEQ  -> List.iter f es1; p "=" ; List.iter f es1; p " * "  ; List.iter f es2     
-        | DIVEQ   -> List.iter f es1; p "=" ; List.iter f es1; p " // " ; List.iter f es2       
-        | MODEQ   -> List.iter f es1; p "=" ; List.iter f es1; p " % "  ; List.iter f es2     
-        | BANDEQ  -> List.iter f es1; p "=" ; List.iter f es1; p " & "  ; List.iter f es2     
-        | BOREQ   -> List.iter f es1; p "=" ; List.iter f es1; p " | "  ; List.iter f es2     
-        | XOREQ   -> List.iter f es1; p "=" ; List.iter f es1; p " ^ "  ; List.iter f es2     
-        | LSHFTEQ -> List.iter f es1; p "=" ; List.iter f es1; p " << " ; List.iter f es2       
-        | RSHFTEQ -> List.iter f es1; p "=" ; List.iter f es1; p " >> " ; List.iter f es2       
-        | NANDEQ  -> List.iter f es1; p "=" ; p "~("; List.iter f es1; p " & " ; List.iter f es2; p ")" );
+        | ASG     -> List.iter f1 es1; p "= " ; List.iter f1 es2;              
+        (* es length = 1 *)
+        | PLUSEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " + "  ; List.iter f2 es2       
+        | MINUSEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " - "  ; List.iter f2 es2     
+        | MULTEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " * "  ; List.iter f2 es2     
+        | DIVEQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " // " ; List.iter f2 es2       
+        | MODEQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " % "  ; List.iter f2 es2     
+        | BANDEQ  -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " & "  ; List.iter f2 es2     
+        | BOREQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " | "  ; List.iter f2 es2     
+        | XOREQ   -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " ^ "  ; List.iter f2 es2     
+        | LSHFTEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " << " ; List.iter f2 es2       
+        | RSHFTEQ -> List.iter f2 es1; p " = " ; List.iter f2 es1; p " >> " ; List.iter f2 es2       
+        | NANDEQ  -> List.iter f2 es1; p " = " ; p "~("; List.iter f2 es1; p " & " ; List.iter f2 es2; p ")" );
         p "\n"; 
     | ShortValDeclaration (ids, es) -> 
         p_ind il;
@@ -264,11 +276,12 @@ and cg_stmt ?(il=0) stmt =
         List.iter f ids; p " = "; 
         let f e = cg_exp e; p ", " in 
         List.iter f es; p "\n"
-    | IfStatement ifstmt -> () (*TODO *)
-    | ForStatement (s1, eso, s2, ss, _) -> () (*TODO*)
-    | SwitchStatement (s, eso, swcl, _) -> () (*TODO*)
+    | IfStatement ifstmt -> cg_ifstmt ~il ifstmt
+    | ForStatement (s1, eso, s2, ss, _) -> ()
+        (*p_ind il; p "def for_statement():\n"*)
+    | SwitchStatement (s, eso, swcl, _) -> () (* TODO *)
     | BlockStatements (ss, pos) ->
-        p_ind il; p "def block_statements():\n";
+        p "\n"; p_ind il; p "def block_statements():\n";
 
         enter_first_child_scope ();
         
@@ -276,34 +289,44 @@ and cg_stmt ?(il=0) stmt =
 
         List.iter (cg_stmt ~il:(il + 1)) ss;
 
+        p_ind il; p "block_statements()\n";
+
         enter_parent_and_delete_first_child_scope ()
-    | EmptyStatement -> ()
+    | EmptyStatement -> p "\n"
   
-(*
-and cg_ifstmt ?(il=0) ifst = 
-    p_ind il;
-    p "def fun_if(): \n";
-    (*Call the fucntion to add nonlocals here *)
-    match ifst with  
-    | If (s,  e, ss, eso) -> 
-        p_ind (il + 1);
-        cg_stmt s;
-        p "\n"; p_ind (il + 1)
-        p "if ";
-        cg_exp e;
-        p ":\n";
-        (*Check if this syntax makes any sense to you in utop *)
-        List.iter (cg_stmt ~il:(il + 2))  ss; (*This is probably wrong syntax *)
-        p_ind (il + 1)
-        (match eso with : 
-        | Some els ->  
-            (*Beware of the weird indentation problems here *)
-            (match els with
-            | Elseif ifstmt -> p "el" cg_ifstmt ~il(il + 1) ifstmt 
-            | )
-*)          
+and cg_ifstmt ?(il=0) (If (s, e, ss, elso, pos)) = 
+    p_ind il; p "def if_statement():\n";
+    enter_first_child_scope ();
+    get_and_print_nonlocals ~il:(il+1) [s] pos;
 
+    cg_stmt ~il:(il+1) s;
+    p_ind (il + 1); p "if "; cg_exp e; p ":\n";
 
-        
-        
+    p_ind (il + 2); p "def _if():\n";
+    enter_first_child_scope ();
+    get_and_print_nonlocals ~il:(il+3) ss (let ln,cn = pos in ln,cn+1000);
 
+    List.iter (cg_stmt ~il:(il + 3)) ss;
+
+    enter_parent_and_delete_first_child_scope ();
+    p_ind (il + 2); p "_if()\n";
+
+    (match elso with
+    | Some els ->  
+        p_ind (il + 1); p "else:\n";
+        (match els with
+        | Elseif (ifstmt,_) -> cg_ifstmt ~il:(il+2) ifstmt
+        | Else (ss, pos) ->
+            p_ind (il+2); p "def else_statement():\n";
+            enter_first_child_scope ();
+            get_and_print_nonlocals ~il:(il+3) ss pos;
+
+            List.iter (cg_stmt ~il:(il+3)) ss;
+
+            enter_parent_and_delete_first_child_scope ();
+            p_ind (il + 2); p "else_statement()\n";
+        )
+    | None -> ());
+      
+    enter_parent_and_delete_first_child_scope ();
+    p_ind il; p "if_statement()\n\n"

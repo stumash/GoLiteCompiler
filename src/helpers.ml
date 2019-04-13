@@ -70,7 +70,8 @@ let remove_dups xs =
       | h::(h'::_ as t) ->
           if h = h' then remove_dups' acc t
           else           remove_dups' (h::acc) t
-      | _ -> acc in
+      | [h] -> h::acc
+      | []  -> acc in
   remove_dups' [] (List.sort compare xs)
 
 let fst3 (one, two, three) = one
