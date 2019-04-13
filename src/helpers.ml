@@ -64,6 +64,15 @@ let find_dup xs =
       | _ -> raise (Failure "IMPOSSIBLE: no dups found") in
   f (List.sort compare xs)
 
+let remove_dups xs =
+  let rec remove_dups' acc xs =
+      match xs with
+      | h::(h'::_ as t) ->
+          if h = h' then remove_dups' acc t
+          else           remove_dups' (h::acc) t
+      | _ -> acc in
+  remove_dups' [] (List.sort compare xs)
+
 let fst3 (one, two, three) = one
 let snd3 (one, two, three) = two
 let trd3 (one, two, three) = three

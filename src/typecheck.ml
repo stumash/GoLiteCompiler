@@ -115,18 +115,17 @@ let err_if_id_in_current_scope (Identifier (str, pos)) =
     | Not_found -> ()
 
 (* recurse until entry found, then do check *)
-let err_if_id_not_declared ?f:(op=0) ?(check=(fun a b -> b)) (Identifier (str, pos)) =
+let err_if_id_not_declared ?(void_if_not_in_current_scope=false) ?(check=(fun a b -> b)) (Identifier (str, pos)) =
     let rec err_if_id_not_declared' str scope =
         try
             let (cat, glt, pos) = Hashtbl.find (context scope) str in
             check cat glt
         with
         | Not_found ->
-            (match op with 
-            | 0 -> (match parent scope with
-                    | CsRoot -> raise (TypeCheckError (str ^ " not declared", pos))
-                    | csn    -> err_if_id_not_declared' str csn)
-            | 1 -> T.Void )
+            if void_if_not_in_current_scope then T.Void else
+            (match parent scope with
+            | CsRoot -> raise (TypeCheckError (str ^ " not declared", pos))
+            | csn    -> err_if_id_not_declared' str csn)
    in
    err_if_id_not_declared' str !current_scope
 
@@ -279,7 +278,7 @@ and type_check_e e =
     | LitString (s, _)    -> NamedT ("string", (-1, -1))
     | LitRawString (s, _) -> NamedT ("string", (-1, -1))
     (* identifier expression *)
-    | IdentifierExpression idexp ->  type_check_idexp idexp
+    | IdentifierExpression idexp -> type_check_idexp idexp
     (* unary expression *)
     | Uplus (e, pos)  -> ((type_check_e e), (get_pos_e e)) |> (pt_if_rt is_numT nummsg)
     | Uminus (e, pos) -> ((type_check_e e), (get_pos_e e)) |> pt_if_rt is_numT nummsg
@@ -410,26 +409,25 @@ and type_check_stmt s outer_ret_glt =
             let Identifier (str,pos) = find_dup ids in
             raise (TypeCheckError ("duplicate ids: "^str, pos)));
         List.iter (fun e -> type_check_e e; ()) es;
-        let if_at_least_one = ref 0 in
+        let at_least_one = ref 0 in
         (let f (Identifier (str,pos) as id, e) = 
-            let id_type  = 
-                let check cat glt = glt in
-                    err_if_id_not_declared ~f:1 ~check:check id in
+            let id_type = 
+                err_if_id_not_declared ~void_if_not_in_current_scope:true id in
             match id_type with 
-            | T.Void -> 
+            | T.Void ->
                 if str = "_" then () else 
-                (if_at_least_one := 1;
+                (at_least_one := 1;
                 let glt = type_check_e e in ();
                 (match glt with 
                 | T.Void -> raise (TypeCheckError ("void type cannot be assigned (to "^str^")", pos))
                 | _ -> Hashtbl.add (context !current_scope) str (T.Variable, glt, pos));); 
                 ();
-            | _ as glt ->
+            | glt ->
                 if glt <> type_check_e e then 
                     raise (TypeCheckError ("assignment type mismatch", pos))
                 else () in
         List.iter f (List.combine ids es) );
-        if !if_at_least_one <> 0 then None else
+        if !at_least_one <> 0 then None else
         let Identifier (_,pos) = List.hd ids in
         raise (TypeCheckError ("all ids in shorthand-assignment LHS cannot be already declared", pos))
     | BlockStatements (ss, pos) ->

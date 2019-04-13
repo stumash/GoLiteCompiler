@@ -1,11 +1,6 @@
 package main
 
-var a struct{
-    x, y int
-    a struct{
-        x, y int
-    }
-}
+func gg (c int ) {
 
-var b = a.x
-var c = a.a.x
+    var a int
+}
